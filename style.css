@@ -1,0 +1,26 @@
+* {
+    margin: 0px;
+    font-size: 16px;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    height: 100%;
+    min-width: 1000px;
+    min-height: 300px;
+}
+
+#tree_container {
+    height: 100%;
+    float: left;
+    width: 70%;
+}
+
+#report_container {
+    height: 100%;
+    float: left;
+    width: 30%;
+}
