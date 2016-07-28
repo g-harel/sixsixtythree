@@ -1,6 +1,8 @@
 * {
     margin: 0px;
     font-size: 16px;
+    font-family: monospace;
+    font-size: 18px;
 }
 
 html {
@@ -11,16 +13,29 @@ body {
     height: 100%;
     min-width: 1000px;
     min-height: 300px;
+    overflow: hidden;
+}
+
+ul {
+    list-style: none;
+    margin-left: -10px;
+}
+
+li {
+    padding-top: 10px;
 }
 
 #tree_container {
+    overflow-y: scroll;
     height: 100%;
     float: left;
     width: 70%;
 }
 
 #report_container {
+    overflow-y: scroll;
     height: 100%;
     float: left;
     width: 30%;
+    background-color: black;
 }
