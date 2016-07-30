@@ -1,8 +1,8 @@
 * {
-    margin: 0px;
-    font-size: 16px;
     font-family: monospace;
+    position: relative;
     font-size: 18px;
+    margin: 0px;
 }
 
 html {
@@ -10,10 +10,10 @@ html {
 }
 
 body {
-    height: 100%;
     min-width: 1000px;
     min-height: 300px;
     overflow: hidden;
+    height: 100%;
 }
 
 ul {
@@ -25,17 +25,41 @@ li {
     padding-top: 10px;
 }
 
+polygon:hover {
+    cursor: pointer;
+    opacity: 0.5;
+}
+
+.add_child:hover {
+    cursor: pointer;
+    opacity: 0.5;
+}
+
 #tree_container {
+    width: calc(100% + 20px);
     overflow-y: scroll;
     height: 100%;
     float: left;
-    width: 70%;
 }
 
 #report_container {
+    background-color: black;
+    width: calc(30% + 20px);
     overflow-y: scroll;
     height: 100%;
-    float: left;
-    width: 30%;
-    background-color: black;
+    top: -100%;
+    z-index: 2;
+    left: 70%;
+}
+
+#close_report, #open_report {
+    left: calc(70% - 14px);
+    position: absolute;
+    z-index: 2;
+    fill: grey;
+    top: 6px;
+}
+
+#open_report {
+    left: calc(100% - 20px);
 }
