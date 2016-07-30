@@ -1,5 +1,3 @@
-// TODO expanding/collapsing right panel
-
 (function() {
 
     // Root Object constructor
@@ -44,7 +42,7 @@
             return '';
         }
         function list(node, position) {
-            var temp = '<li><span id="' + info + position.join('');
+            var temp = '<li><span id="' + position.join('');
             if (!node.children.length) {
                 return temp + '" class="node leaf">' + node.info + '</span></li>';
             } else {
@@ -55,6 +53,7 @@
                 temp += list(node.children[i], position);
                 position.pop();
             }
+            // temp += '<li><span class="add_child" data-access="' + position.join('') + '">+ ADD ITEM</span></li>';
             return temp + '</ul></li>';
         }
         var info = this.info,
@@ -93,6 +92,15 @@
         return result;
     };
 
+    // returns the node at the specified indicies in the Root's children (left to right)
+    Root.prototype.access = function(indecies) {
+        temp = this;
+        while (indecies.length !== 0 && this.children.length >= indecies[0]) {
+            temp = temp.children[indecies.shift()];
+        }
+        return temp;
+    };
+
     // Node Object contructor
     function Node(info, completed, due, children) {
         this.info = info || '663663663663';
@@ -122,32 +130,48 @@
         return percentage;
     };
 
-    // returns the node at the specified indicies in the Node's children (left to right)
-    Root.prototype.access = Node.prototype.access = function(indecies) {
-        if (indecies.length === 0 || this.children.length < indecies[0]) {
-            return this;
-        }
-        return this.children[indecies.shift()].access(indecies);
-    };
-
-    // on ready
     document.addEventListener("DOMContentLoaded", function() {
 
-        var root = new Root('root', []);
-        console.log(root);
-        function add_children(node, depth) {
-            if (depth <= 0) {
-                return;
-            }
-            node.children = [new Node(depth), new Node(depth), new Node(depth)];
-            add_children(node.children[0], depth - 1);
-            add_children(node.children[1], depth - 1);
-            add_children(node.children[2], depth - 1);
-        }
-        add_children(root, 3);
-        root.save_recipe();
+        // console.log(root);
+        // function add_children(node, depth) {
+        //     if (depth <= 0) {
+        //         return;
+        //     }
+        //     node.children = [new Node(depth), new Node(depth), new Node(depth)];
+        //     add_children(node.children[0], depth - 1);
+        //     add_children(node.children[1], depth - 1);
+        //     add_children(node.children[2], depth - 1);
+        // }
+        // add_children(root, 3);
+        // root.save_recipe();
+
+        // reading and displaying stored data
+        var root = new Root('root');
         document.getElementById('tree_container').innerHTML = root.html_list();
-        console.log(root.percent_completion());
+
+        // event listeners for toggling the report div
+        var close_report = document.getElementById('close_report'),
+            report_container = document.getElementById('report_container');
+        close_report.addEventListener('click', function() {
+            report_container.style.display = 'none';
+            close_report.style.display = 'none';
+        });
+
+        document.getElementById('open_report').addEventListener('click', function() {
+            report_container.style.display = 'block';
+            close_report.style.display = 'block';
+        });
+
+        // event listener for right clicks on items
+        var items = document.getElementsByClassName('node');
+        for (var i = 0; i < items.length; i++) {
+            items[i].addEventListener('contextmenu', item_contextmenu);
+        }
+        function item_contextmenu(e) {
+            e.preventDefault();
+            // TODO create contextmenu
+            console.log(e.srcElement.id);
+        }
 
     });
 }());
