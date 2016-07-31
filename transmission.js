@@ -117,8 +117,8 @@
         }
     };
 
-    // returns the completion percentage of a Node or Root
-    Root.prototype.percent_completion = Node.prototype.percent_completion = function() {
+    // returns the completion percentage of a Node
+    Node.prototype.percent_completion = function() {
         var percentage = 0,
             dependants = this.children.length;
         if (this.completed === true) {
@@ -130,9 +130,19 @@
         return percentage;
     };
 
+    // function to draw contextmenu for this Node
+    Node.prototype.contextmenu = function(x, y) {
+        var contextmenu_container = document.getElementById('contextmenu_container');
+        contextmenu_container.innerHTML = '<div id="contextmenu" style="top:' + y + 'px;left:' + x + 'px;">' + this.info + '</div>';
+        contextmenu_container.style.display = 'block';
+        contextmenu_container.children[0].addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('hello');
+        });
+    };
+
     document.addEventListener("DOMContentLoaded", function() {
 
-        // console.log(root);
         // function add_children(node, depth) {
         //     if (depth <= 0) {
         //         return;
@@ -156,7 +166,6 @@
             report_container.style.display = 'none';
             close_report.style.display = 'none';
         });
-
         document.getElementById('open_report').addEventListener('click', function() {
             report_container.style.display = 'block';
             close_report.style.display = 'block';
@@ -169,9 +178,16 @@
         }
         function item_contextmenu(e) {
             e.preventDefault();
-            // TODO create contextmenu
-            console.log(e.srcElement.id);
+            root.access(e.srcElement.id.split('')).contextmenu(e.clientX, e.clientY);
         }
 
+        // event listener to close the custom context menu when leftclick outside of it
+        var contextmenu_container = document.getElementById('contextmenu_container');
+        contextmenu_container.addEventListener('click', function() {
+            console.log('clicked');
+            contextmenu_container.style.display = 'none';
+        });
+
     });
+
 }());

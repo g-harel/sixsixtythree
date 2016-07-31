@@ -10,8 +10,8 @@ html {
 }
 
 body {
-    min-width: 1000px;
     min-height: 300px;
+    min-width: 600px;
     overflow: hidden;
     height: 100%;
 }
@@ -35,6 +35,22 @@ polygon:hover {
     opacity: 0.5;
 }
 
+.node:hover {
+    opacity: 0.5;
+}
+
+#close_report, #open_report {
+    left: calc(70% - 14px);
+    position: absolute;
+    z-index: 2;
+    fill: grey;
+    top: 6px;
+}
+
+#open_report {
+    left: calc(100% - 20px);
+}
+
 #tree_container {
     width: calc(100% + 20px);
     overflow-y: scroll;
@@ -52,14 +68,16 @@ polygon:hover {
     left: 70%;
 }
 
-#close_report, #open_report {
-    left: calc(70% - 14px);
+#contextmenu_container {
     position: absolute;
+    display: none;
+    height: 100%;
+    width: 100%;
     z-index: 2;
-    fill: grey;
-    top: 6px;
 }
 
-#open_report {
-    left: calc(100% - 20px);
+#contextmenu {
+    background-color: red;
+    height: 100px;
+    width: 100px;
 }
