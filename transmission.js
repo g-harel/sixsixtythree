@@ -135,12 +135,15 @@
         var contextmenu_container = document.getElementById('contextmenu_container');
         contextmenu_container.innerHTML = '<div id="contextmenu" style="top:' + y + 'px;left:' + x + 'px;">' + this.info + '</div>';
         contextmenu_container.style.display = 'block';
-        contextmenu_container.children[0].addEventListener('click', function(e) {
-            e.stopPropagation();
+        contextmenu_container.children[0].addEventListener('mousedown', function(e) {
+            if (e.which === 1) {
+                e.stopPropagation();
+            }
             console.log('hello');
         });
     };
 
+    // document ready code
     document.addEventListener("DOMContentLoaded", function() {
 
         // function add_children(node, depth) {
@@ -183,8 +186,7 @@
 
         // event listener to close the custom context menu when leftclick outside of it
         var contextmenu_container = document.getElementById('contextmenu_container');
-        contextmenu_container.addEventListener('click', function() {
-            console.log('clicked');
+        contextmenu_container.addEventListener('mousedown', function() {
             contextmenu_container.style.display = 'none';
         });
 
