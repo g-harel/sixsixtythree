@@ -1,3 +1,5 @@
+/*jshint esversion: 6 */
+
 (function() {
 
     // Root Object constructor
@@ -133,14 +135,26 @@
     // function to draw contextmenu for this Node
     Node.prototype.contextmenu = function(x, y) {
         var contextmenu_container = document.getElementById('contextmenu_container');
-        contextmenu_container.innerHTML = '<div id="contextmenu" style="top:' + y + 'px;left:' + x + 'px;">' + this.info + '</div>';
+        contextmenu_container.innerHTML = `
+            <div id="contextmenu" style="top:${y}px;left:${x}px;">
+                <ul id="contextmenu_list">
+                    <li>ONE</li>
+                    <li>TWO</li>
+                    <li>THREE</li>
+                    <li>FOUR</li>
+                    <li>FIVE</li>
+                </ul>
+            </div>`;
         contextmenu_container.style.display = 'block';
         contextmenu_container.children[0].addEventListener('mousedown', function(e) {
-            if (e.which === 1) {
-                e.stopPropagation();
-            }
-            console.log('hello');
+            console.log('click');
         });
+        window.addEventListener('mousedown', hide_contextmenu);
+        function hide_contextmenu() {
+            contextmenu_container.style.display = 'none';
+            console.log('removed');
+            window.removeEventListener('mousedown', hide_contextmenu);
+        }
     };
 
     // document ready code
@@ -183,12 +197,6 @@
             e.preventDefault();
             root.access(e.srcElement.id.split('')).contextmenu(e.clientX, e.clientY);
         }
-
-        // event listener to close the custom context menu when leftclick outside of it
-        var contextmenu_container = document.getElementById('contextmenu_container');
-        contextmenu_container.addEventListener('mousedown', function() {
-            contextmenu_container.style.display = 'none';
-        });
 
     });
 

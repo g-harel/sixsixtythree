@@ -1,5 +1,6 @@
 * {
     font-family: monospace;
+    font-weight: bold;
     position: relative;
     font-size: 18px;
     margin: 0px;
@@ -68,16 +69,27 @@ polygon:hover {
     left: 70%;
 }
 
-#contextmenu_container {
+#contextmenu {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+    border: 1px solid black;
+    background-color: white;
     position: absolute;
-    display: none;
-    height: 100%;
-    width: 100%;
-    z-index: 2;
+    z-index: 999;
 }
 
-#contextmenu {
-    background-color: red;
-    height: 100px;
+#contextmenu_list {
+    margin-left: -40px;
+    text-align: center;
+    cursor: pointer;
     width: 100px;
+}
+
+#contextmenu_list li {
+    font-size: 16px;
+    padding: 3px;
+}
+
+#contextmenu_list li:hover {
+    background-color: #eee;
 }
