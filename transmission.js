@@ -1,5 +1,7 @@
 /*jshint esversion: 6 */
 
+// TODO use template litterals for html_list
+
 (function() {
 
     // Root Object constructor
@@ -22,16 +24,6 @@
             }
         }
     }
-
-    // returns a formatted string of the Root and its children
-    Root.prototype.stringify = function(tabs) {
-        tabs = tabs || '\t';
-        var stringified = this.info + (this.children.length?' >':'');
-        for (var i = 0; i < this.children.length; i++) {
-            stringified += '\n' + tabs + this.children[i].stringify(tabs + '\t');
-        }
-        return stringified;
-    };
 
     // saves the Node to localStorage
     Root.prototype.save_recipe = function() {
@@ -111,14 +103,6 @@
         this.children = (Object.prototype.toString.call(children) === '[object Array]' && children)  || [];
     }
 
-    // overrides the completion status of a Node and its children
-    Node.prototype.override_completion = function(value) {
-        this.completed = value?true:false;
-        for (var i = 0; i < this.children.length; i++) {
-            this.children[i].override_completion(value);
-        }
-    };
-
     // returns the completion percentage of a Node
     Node.prototype.percent_completion = function() {
         var percentage = 0,
@@ -137,22 +121,33 @@
         var contextmenu_container = document.getElementById('contextmenu_container');
         contextmenu_container.innerHTML = `
             <div id="contextmenu" style="top:${y}px;left:${x}px;">
-                <ul id="contextmenu_list">
-                    <li>ONE</li>
-                    <li>TWO</li>
-                    <li>THREE</li>
-                    <li>FOUR</li>
-                    <li>FIVE</li>
-                </ul>
+                <div class="item">${this.completed?'TODO':'DONE'}</div>
+                <div class="item">ADD</div>
+                <div class="item">COLOR
+                    <div class="submenu">
+                        <div class="item"><span style="background-color:rgb(255,205,191);">RED</span></div>
+                        <div class="item"><span style="background-color:rgb(255,250,193);">YELLOW</span></div>
+                        <div class="item"><span style="background-color:rgb(199,255,191);">GREEN</span></div>
+                        <div class="item"><span style="background-color:rgb(191,255,235);">BLUE</span></div>
+                        <div class="item"><span style="background-color:rgb(233,191,255);">PURPLE</span></div>
+                    </div>
+                </div>
+                <div class="item">EDIT
+                    <div class="submenu">
+                        <div class="item">INFO</div>
+                        <div class="item">DATE</div>
+                    </div>
+                </div>
+                <div class="item">REMOVE</div>
             </div>`;
         contextmenu_container.style.display = 'block';
-        contextmenu_container.children[0].addEventListener('mousedown', function(e) {
+        contextmenu = contextmenu_container.children[0];
+        contextmenu.addEventListener('mousedown', function(e) {
             console.log('click');
         });
         window.addEventListener('mousedown', hide_contextmenu);
-        function hide_contextmenu() {
+        function hide_contextmenu(e) {
             contextmenu_container.style.display = 'none';
-            console.log('removed');
             window.removeEventListener('mousedown', hide_contextmenu);
         }
     };
@@ -160,33 +155,22 @@
     // document ready code
     document.addEventListener("DOMContentLoaded", function() {
 
-        // function add_children(node, depth) {
-        //     if (depth <= 0) {
-        //         return;
-        //     }
-        //     node.children = [new Node(depth), new Node(depth), new Node(depth)];
-        //     add_children(node.children[0], depth - 1);
-        //     add_children(node.children[1], depth - 1);
-        //     add_children(node.children[2], depth - 1);
-        // }
-        // add_children(root, 3);
-        // root.save_recipe();
+        var root = new Root('root', []);
+        function add_children(node, depth) {
+            if (depth <= 0) {
+                return;
+            }
+            node.children = [new Node(depth), new Node(depth), new Node(depth)];
+            add_children(node.children[0], depth - 1);
+            add_children(node.children[1], depth - 1);
+            add_children(node.children[2], depth - 1);
+        }
+        add_children(root, 3);
+        root.save_recipe();
 
         // reading and displaying stored data
-        var root = new Root('root');
+        // var root = new Root('root');
         document.getElementById('tree_container').innerHTML = root.html_list();
-
-        // event listeners for toggling the report div
-        var close_report = document.getElementById('close_report'),
-            report_container = document.getElementById('report_container');
-        close_report.addEventListener('click', function() {
-            report_container.style.display = 'none';
-            close_report.style.display = 'none';
-        });
-        document.getElementById('open_report').addEventListener('click', function() {
-            report_container.style.display = 'block';
-            close_report.style.display = 'block';
-        });
 
         // event listener for right clicks on items
         var items = document.getElementsByClassName('node');

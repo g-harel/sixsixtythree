@@ -17,18 +17,28 @@ body {
     height: 100%;
 }
 
-ul {
-    list-style: none;
-    margin-left: -10px;
-}
-
-li {
-    padding-top: 10px;
-}
-
-polygon:hover {
+.item {
+    text-align: center;
+    font-size: 16px;
     cursor: pointer;
-    opacity: 0.5;
+    padding: 3px;
+    height: 20px;
+    width: 80px;
+}
+
+.submenu {
+    display: none;
+    padding: 0px;
+    left: 86px;
+    top: -2px;
+}
+
+.item span {
+    font-size: 16px;
+}
+
+.item:hover {
+    background-color: #eee;
 }
 
 .add_child:hover {
@@ -40,56 +50,61 @@ polygon:hover {
     opacity: 0.5;
 }
 
-#close_report, #open_report {
-    left: calc(70% - 14px);
-    position: absolute;
-    z-index: 2;
-    fill: grey;
-    top: 6px;
+.item:hover > .submenu {
+    display: block;
 }
 
-#open_report {
-    left: calc(100% - 20px);
-}
-
-#tree_container {
-    width: calc(100% + 20px);
-    overflow-y: scroll;
-    height: 100%;
-    float: left;
-}
-
-#report_container {
-    background-color: black;
-    width: calc(30% + 20px);
-    overflow-y: scroll;
-    height: 100%;
-    top: -100%;
-    z-index: 2;
-    left: 70%;
-}
-
-#contextmenu {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
-    border: 1px solid black;
+#contextmenu, .submenu {
+    box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
+    border: 2px solid black;
     background-color: white;
     position: absolute;
     z-index: 999;
 }
 
-#contextmenu_list {
-    margin-left: -40px;
-    text-align: center;
+#root_container {
+    width: calc(100% + 20px);
+    padding-bottom: 20px;
+    position: absolute;
+    overflow-y: scroll;
+    height: 100%;
+    left: 0px;
+    top: 0px;
+}
+
+#tree_container {
+    margin-bottom: 200px;
+}
+
+#new_parent {
+    box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
+    background-color: white;
+    border: 2px solid black;
+    margin-bottom: 10px;
+    padding-right: 5px;
+    border-radius: 4px;
+    margin-left: 26px;
+    padding-left: 5px;
+    margin-top: 24px;
     cursor: pointer;
     width: 100px;
 }
 
-#contextmenu_list li {
-    font-size: 16px;
-    padding: 3px;
+#tree_container ul {
+    list-style: none;
+    margin-left: -10px;
 }
 
-#contextmenu_list li:hover {
+#tree_container li {
+    padding-top: 18px;
+}
+
+#new_parent:hover {
     background-color: #eee;
+}
+
+#new_parent:active {
+    box-shadow: 1px 1px 0px 0px rgba(0,0,0,1);
+    left: 2px;
+    top: 2px;
 }
