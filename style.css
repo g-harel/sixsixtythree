@@ -47,7 +47,8 @@ body {
     opacity: 0.5;
 }
 
-.node:hover {
+.title:hover {
+    cursor: pointer;
     opacity: 0.5;
 }
 

@@ -1,8 +1,11 @@
 /*jshint esversion: 6 */
 
-// TODO use template litterals for html_list
-
 (function() {
+
+    // calculates the number of days between two days using the moment library
+    moment.day_difference = function(date) {
+        return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
+    };
 
     // Root Object constructor
     function Root(info, children) {
@@ -32,58 +35,11 @@
 
     // returns an html list of the Root's children
     Root.prototype.html_list = function() {
-        if (!this.children) {
-            return '';
+        var result = '<ul>';
+        for (let i = 0; i < this.children.length; i++) {
+            result += this.children[i].to_string();
         }
-        function list(node, position) {
-            var temp = '<li><span id="' + position.join('');
-            if (!node.children.length) {
-                return temp + '" class="node leaf">' + node.info + '</span></li>';
-            } else {
-                temp = temp + '" class="node branch">' + node.info + '</span><ul>';
-            }
-            for (var i = 0; i < node.children.length; i++) {
-                position.push(i);
-                temp += list(node.children[i], position);
-                position.pop();
-            }
-            // temp += '<li><span class="add_child" data-access="' + position.join('') + '">+ ADD ITEM</span></li>';
-            return temp + '</ul></li>';
-        }
-        var info = this.info,
-            temporary = '<ul>';
-        for (var j = 0; j < this.children.length; j++) {
-            temporary += list(this.children[j], [j]);
-        }
-        return temporary + '</ul>';
-    };
-
-    // returns an array of Nodes for each "days" element where all elements are due within the amount of days, skips duplicates
-    Root.prototype.deadlines = function(days) {
-        if (Object.prototype.toString.call(days) !== '[object Array]') {
-            return [];
-        }
-        function find_nodes(current) {
-            for (var i = 0; i < days.length; i++) {
-                if (moment(current.due, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days') <= days[i]) {
-                    result[days[i]].push(current);
-                    break;
-                }
-            }
-            for (var j = 0; j < current.children.length; j++) {
-                find_nodes(current.children[j]);
-            }
-        }
-        var result = {
-            keys: days
-        };
-        for (var i = 0; i < days.length; i++) {
-            result[days[i]] = [];
-        }
-        for (var j = 0; j < this.children.length; j++) {
-            find_nodes(this.children[j]);
-        }
-        return result;
+        return result + '</ul>';
     };
 
     // returns the node at the specified indicies in the Root's children (left to right)
@@ -96,15 +52,48 @@
     };
 
     // Node Object contructor
-    function Node(info, completed, due, children) {
+    function Node(address, info, completed, due, children, color, collapsed) {
+        this.address = (Object.prototype.toString.call(address) === '[object Array]' && address)  || [];
         this.info = info || '663663663663';
-        this.completed = completed || false;
+        this.completed = completed?true:false;
         this.due = due || moment().format('DD/MM/YYYY');
         this.children = (Object.prototype.toString.call(children) === '[object Array]' && children)  || [];
+        this.color = color || '';
+        this.collapsed = collapsed?true:false;
     }
 
     // highlight colors
-    Node.prototype.colors = ['rgb(255,205,191)','rgb(255,250,193)','rgb(199,255,191)','rgb(191,255,235)','rgb(233,191,255)'];
+    Node.prototype.colors = [['RED', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE'], 'rgb(255,205,191)', 'rgb(255,250,193)', 'rgb(199,255,191)', 'rgb(191,255,235)', 'rgb(233,191,255)'];
+
+    // formatted html string of the Node
+    Node.prototype.to_string = function() {
+        var that = this;
+        return `
+        <li>
+            <span class="${that.address.join('')} node ${that.children.length?'branch':'leaf'}">
+                <span class="title">
+                    ${that.children.length?(that.collapsed?'+':'-'):'&nbsp;'} ${moment.day_difference(that.due)}d ${that.info}
+                </span>
+                <span class="children" style="display:${that.collapsed?'none':'block'};">
+                    ${(function() {
+                        let result = '<ul>';
+                        for (let i = 0; i < that.children.length; i++) {
+                            result += that.children[i].to_string();
+                        }
+                        return result + '</ul>';
+                    }())}
+                </span>
+            </span>
+        </li>`;
+    };
+
+    // calls a function on all DOM elements of this Node
+    Node.prototype.dom_update = function(action) {
+        var elements = document.getElementsByClassName(this.address.join(''));
+        for (let i = 0; i < elements.length; i++) {
+            action(elements[i]);
+        }
+    };
 
     // returns the completion percentage of a Node
     Node.prototype.percent_completion = function() {
@@ -120,13 +109,25 @@
     };
 
     // toggle completion
-    Node.prototype.toggle = function() {
+    Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
-        console.log('toggle');
+        console.log('toggle complete');
+    };
+
+    // toggle collapsed
+    Node.prototype.toggle_collapse = function() {
+        var that = this;
+        that.collapsed = that.collapsed?false:true;
+        that.dom_update(function(element) {
+            element.children[1].style.display = that.collapsed?'none':'block';
+        });
     };
 
     // add a child node
     Node.prototype.add_child = function() {
+        this.dom_update(function(element) {
+            element.innerHTML = 'potato';
+        });
         console.log('add');
     };
 
@@ -156,16 +157,17 @@
         var contextmenu_container = document.getElementById('contextmenu_container');
         contextmenu_container.innerHTML = `
             <div id="contextmenu" style="top:${y}px;left:${x}px;">
-                <div class="item" data-call="toggle">${this.completed?'TODO':'DONE'}</div>
+                <div class="item" data-call="toggle_completion">${this.completed?'TODO':'DONE'}</div>
                 <div class="item" data-call="add_child">ADD</div>
                 <div class="item" data-call="">COLOR
                     <div class="submenu">
-                        <div class="item" data-call="set_color%0"><span style="background-color:${this.colors[0]};">RED</span></div>
-                        <div class="item" data-call="set_color%1"><span style="background-color:${this.colors[1]};">YELLOW</span></div>
-                        <div class="item" data-call="set_color%2"><span style="background-color:${this.colors[2]};">GREEN</span></div>
-                        <div class="item" data-call="set_color%3"><span style="background-color:${this.colors[3]};">BLUE</span></div>
-                        <div class="item" data-call="set_color%4"><span style="background-color:${this.colors[4]};">PURPLE</span></div>
-                        <div class="item" data-call="set_color%"><span>NONE</span></div>
+                        ${(function() {
+                            let result = '';
+                            for (let i = 1; i < that.colors.length; i++) {
+                                result += `<div class="item" data-call="set_color%${i}"><span style="background-color:${that.colors[i]};">${that.colors[0][i-1]}</span></div>`;
+                            }
+                            return result + '<div class="item" data-call="set_color%"><span>NONE</span></div>';
+                        }())}
                     </div>
                 </div>
                 <div class="item" data-call="">EDIT
@@ -195,16 +197,18 @@
     document.addEventListener("DOMContentLoaded", function() {
 
         var root = new Root('root', []);
-        function add_children(node, depth) {
+        function add_children(node, depth, address) {
             if (depth <= 0) {
                 return;
             }
-            node.children = [new Node(depth), new Node(depth), new Node(depth)];
-            add_children(node.children[0], depth - 1);
-            add_children(node.children[1], depth - 1);
-            add_children(node.children[2], depth - 1);
+            node.children = [new Node((address.join('')+'0').split(''), depth),
+                            new Node((address.join('')+'1').split(''), depth),
+                            new Node((address.join('')+'2').split(''), depth)];
+            add_children(node.children[0], depth - 1, (address.join('')+'0').split(''));
+            add_children(node.children[1], depth - 1, (address.join('')+'1').split(''));
+            add_children(node.children[2], depth - 1, (address.join('')+'2').split(''));
         }
-        add_children(root, 3);
+        add_children(root, 3, []);
         root.save_recipe();
 
         // reading and displaying stored data
@@ -214,11 +218,15 @@
         // event listener for right clicks on items
         var items = document.getElementsByClassName('node');
         for (var i = 0; i < items.length; i++) {
-            items[i].addEventListener('contextmenu', item_contextmenu);
+            items[i].children[0].addEventListener('contextmenu', item_contextmenu);
+            items[i].children[0].addEventListener('click', toggle);
         }
         function item_contextmenu(e) {
             e.preventDefault();
-            root.access(e.srcElement.id.split('')).contextmenu(e.clientX, e.clientY);
+            root.access(e.srcElement.parentNode.className.split(' ')[0].split('')).contextmenu(e.clientX, e.clientY);
+        }
+        function toggle(e) {
+            root.access(e.srcElement.parentNode.className.split(' ')[0].split('')).toggle_collapse();
         }
 
     });
