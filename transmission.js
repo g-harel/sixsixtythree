@@ -103,6 +103,9 @@
         this.children = (Object.prototype.toString.call(children) === '[object Array]' && children)  || [];
     }
 
+    // highlight colors
+    Node.prototype.colors = ['rgb(255,205,191)','rgb(255,250,193)','rgb(199,255,191)','rgb(191,255,235)','rgb(233,191,255)'];
+
     // returns the completion percentage of a Node
     Node.prototype.percent_completion = function() {
         var percentage = 0,
@@ -116,40 +119,76 @@
         return percentage;
     };
 
+    // toggle completion
+    Node.prototype.toggle = function() {
+        this.completed = this.completed?false:true;
+        console.log('toggle');
+    };
+
+    // add a child node
+    Node.prototype.add_child = function() {
+        console.log('add');
+    };
+
+    // set overlay color
+    Node.prototype.set_color = function(color) {
+        console.log('color ' + this.colors[color]);
+    };
+
+    // change the info property
+    Node.prototype.set_info = function() {
+        console.log('set_info');
+    };
+
+    // change the date property
+    Node.prototype.set_date = function() {
+        console.log('set_date');
+    };
+
+    // delete this node
+    Node.prototype.remove = function() {
+        console.log('remove');
+    };
+
     // function to draw contextmenu for this Node
     Node.prototype.contextmenu = function(x, y) {
+        var that = this;
         var contextmenu_container = document.getElementById('contextmenu_container');
         contextmenu_container.innerHTML = `
             <div id="contextmenu" style="top:${y}px;left:${x}px;">
-                <div class="item">${this.completed?'TODO':'DONE'}</div>
-                <div class="item">ADD</div>
-                <div class="item">COLOR
+                <div class="item" data-call="toggle">${this.completed?'TODO':'DONE'}</div>
+                <div class="item" data-call="add_child">ADD</div>
+                <div class="item" data-call="">COLOR
                     <div class="submenu">
-                        <div class="item"><span style="background-color:rgb(255,205,191);">RED</span></div>
-                        <div class="item"><span style="background-color:rgb(255,250,193);">YELLOW</span></div>
-                        <div class="item"><span style="background-color:rgb(199,255,191);">GREEN</span></div>
-                        <div class="item"><span style="background-color:rgb(191,255,235);">BLUE</span></div>
-                        <div class="item"><span style="background-color:rgb(233,191,255);">PURPLE</span></div>
+                        <div class="item" data-call="set_color%0"><span style="background-color:${this.colors[0]};">RED</span></div>
+                        <div class="item" data-call="set_color%1"><span style="background-color:${this.colors[1]};">YELLOW</span></div>
+                        <div class="item" data-call="set_color%2"><span style="background-color:${this.colors[2]};">GREEN</span></div>
+                        <div class="item" data-call="set_color%3"><span style="background-color:${this.colors[3]};">BLUE</span></div>
+                        <div class="item" data-call="set_color%4"><span style="background-color:${this.colors[4]};">PURPLE</span></div>
+                        <div class="item" data-call="set_color%"><span>NONE</span></div>
                     </div>
                 </div>
-                <div class="item">EDIT
+                <div class="item" data-call="">EDIT
                     <div class="submenu">
-                        <div class="item">INFO</div>
-                        <div class="item">DATE</div>
+                        <div class="item" data-call="set_info">INFO</div>
+                        <div class="item" data-call="set_date">DATE</div>
                     </div>
                 </div>
-                <div class="item">REMOVE</div>
+                <div class="item" data-call="remove">REMOVE</div>
             </div>`;
         contextmenu_container.style.display = 'block';
         contextmenu = contextmenu_container.children[0];
-        contextmenu.addEventListener('mousedown', function(e) {
-            console.log('click');
-        });
         window.addEventListener('mousedown', hide_contextmenu);
         function hide_contextmenu(e) {
             contextmenu_container.style.display = 'none';
             window.removeEventListener('mousedown', hide_contextmenu);
         }
+        contextmenu.addEventListener('mousedown', function(e) {
+            var param = e.srcElement.getAttribute('data-call').split('%');
+            if(param[0]) {
+                that[param[0]](param[1]||false);
+            }
+        });
     };
 
     // document ready code
