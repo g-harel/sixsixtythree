@@ -42,14 +42,18 @@ body {
     background-color: #eee;
 }
 
+.symbol:hover {
+    cursor: pointer;
+    opacity: 0.5;
+}
+
 .add_child:hover {
     cursor: pointer;
     opacity: 0.5;
 }
 
 .title:hover {
-    cursor: pointer;
-    opacity: 0.5;
+    opacity: 0.8;
 }
 
 .item:hover > .submenu {
