@@ -13,40 +13,42 @@ var root;
     };
 
     // Root Object constructor
-    function Root(info, children) {
-        function nodify(node) {
-            var temp =  new Node(node.info, node.completed, node.due, []);
-            for (var i = 0; i < node.children.length; i++) {
-                temp.children.push(nodify(node.children[i]));
-            }
-            return temp;
-        }
-        this.info = info || 'root';
-        if (children) {
-            this.children = (Object.prototype.toString.call(children) === '[object Array]' && children)  || [];
-        } else {
-            this.children = [];
-            temp = JSON.parse(localStorage[this.info]);
-            for (var i = 0; i < temp.length; i++) {
-                this.children.push(nodify(temp[i]));
-            }
-        }
+    function Root() {
+        this.children = [];
     }
 
-    // saves the Node to localStorage
+    // saves the Root to localStorage
     Root.prototype.save_recipe = function() {
-        localStorage[(this.info || 'backup')] = JSON.stringify(this.children);
+        localStorage.root = JSON.stringify(this.children, function(key, value) {
+            if (key === 'address') {
+                return undefined;
+            } else {
+                return value;
+            }
+        });
     };
 
-    // returns an html list of the Root's children
-    Root.prototype.html_list = function() {
-        var result = '<ul>';
-        for (let i = 0; i < this.children.length; i++) {
-            if (this.children[i]) {
-                result += this.children[i].to_string();
+    // reads the Root from localStorage
+    Root.prototype.read_recipie = function() {
+        var temp = JSON.parse(localStorage.root);
+        for (var i = 0; i < temp.length; i++) {
+            nodify(root, temp[i]);
+        }
+        function nodify(parent, node) {
+            var temporary =  new Node(node.info, node.completed, node.due, node.color, node.collapsed),
+                index = parent.add_child(temporary);
+            for (var i = 0; i < node.children.length; i++) {
+                nodify(parent.children[index], node.children[i]);
             }
         }
-        return result + '</ul>';
+    };
+
+    // adds a child to this Root
+    Root.prototype.add_child = function(node) {
+        var temp = this.children.length;
+        node.address = [temp];
+        this.children.push(node);
+        return temp;
     };
 
     // returns the node at the specified indicies in the Root's children (left to right)
@@ -60,7 +62,14 @@ var root;
 
     // updates the tree
     Root.prototype.dom_update = function() {
-        document.getElementById('tree_container').innerHTML = this.html_list();
+        var result = '<ul>';
+        for (let i = 0; i < this.children.length; i++) {
+            if (this.children[i]) {
+                result += this.children[i].to_string();
+            }
+        }
+        result += '</ul>';
+        document.getElementById('tree_container').innerHTML = result;
         this.refresh_listeners();
     };
 
@@ -84,18 +93,26 @@ var root;
     };
 
     // Node Object contructor
-    function Node(address, info, completed, due, children, color, collapsed) {
-        this.address = (Object.prototype.toString.call(address) === '[object Array]' && address)  || [];
+    function Node(info, completed, due, color, collapsed) {
         this.info = info || '663663663663';
-        this.completed = completed?true:false;
         this.due = due || moment().format('DD/MM/YYYY');
-        this.children = (Object.prototype.toString.call(children) === '[object Array]' && children)  || [];
-        this.color = color || 'transparent';
         this.collapsed = collapsed?true:false;
+        this.completed = completed?true:false;
+        this.color = color || 'transparent';
+        this.children = [];
     }
 
     // highlight colors
     Node.prototype.colors = [['NONE', 'RED', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE'], 'transparent', 'rgb(255,205,191)', 'rgb(255,250,193)', 'rgb(199,255,191)', 'rgb(191,255,235)', 'rgb(233,191,255)'];
+
+    // adds a child to this Node and give it an address
+    Node.prototype.add_child = function(node) {
+        var temp = this.children.length;
+        node.address = this.address.slice(0);
+        node.address.push(temp);
+        this.children.push(node);
+        return temp;
+    };
 
     // returns an array [innerHTML, style.cssText] for the symbol
     Node.prototype.get_symbol = function() {
@@ -103,13 +120,14 @@ var root;
         if (!this.children.length) {
             temp = ['&nbsp;', 'pointer-events:none;'];
         } else if (this.collapsed) {
+            temp = ['+', ''];
             if (this.completed) {
-                temp = ['+', 'pointer-events:none;'];
+                temp[1] = 'pointer-events:none;';
             } else {
-                temp = ['+', 'pointer-events:all;'];
+                temp[1] = 'pointer-events:all;';
             }
         } else {
-            temp = ['-', 'mouse-events:all;'];
+            temp = ['-', 'pointer-events:all;'];
         }
         if (this.completed) {
             temp[1] += 'opacity:0.1;';
@@ -153,13 +171,12 @@ var root;
 
     // formatted html string of the Node
     Node.prototype.to_string = function() {
-        var that = this,
-            symbol = that.get_symbol(),
-            title = that.get_title(),
-            children = that.get_children(true);
+        var symbol = this.get_symbol(),
+            title = this.get_title(),
+            children = this.get_children(true);
         return `
         <li>
-            <span class="${that.address.join('')} node">
+            <span class="${this.address.join('')} node">
                 <span class="symbol" style="${symbol[1]}">
                     ${symbol[0]}
                 </span>
@@ -193,19 +210,6 @@ var root;
         }
     };
 
-    // returns the completion percentage of a Node
-    Node.prototype.percent_completion = function() {
-        var percentage = 0,
-            dependants = this.children.length;
-        if (this.completed === true) {
-            return 1;
-        }
-        for (var i = 0; i < dependants; i++) {
-            percentage += this.children[i].percent_completion()/dependants;
-        }
-        return percentage;
-    };
-
     // toggle completion
     Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
@@ -222,7 +226,7 @@ var root;
     };
 
     // add a child node
-    Node.prototype.add_child = function() {
+    Node.prototype.new_child = function() {
         console.log('add');
     };
 
@@ -254,28 +258,31 @@ var root;
         var that = this;
         var contextmenu_container = document.getElementById('contextmenu_container');
         contextmenu_container.innerHTML = `
-            <div id="contextmenu" style="top:${y}px;left:${x}px;">
-                <div class="item" data-funcall="toggle_completion">${this.completed?'TODO':'DONE'}</div>
-                <div class="item" data-funcall="add_child">ADD</div>
-                <div class="item" data-funcall="">COLOR
-                    <div class="submenu">
-                        ${(function() {
-                            let result = '';
-                            for (let i = 1; i < that.colors.length; i++) {
-                                result += `<div class="item" data-funcall="set_color%${i}"><span style="background-color:${that.colors[i]};">${that.colors[0][i-1]}</span></div>`;
-                            }
-                            return result;
-                        }())}
-                    </div>
+        <div id="contextmenu" style="top:${y}px;left:${x}px;">
+            <div class="item" data-funcall="toggle_completion">${this.completed?'NOT DONE':'DONE'}</div>
+            <div class="item" data-funcall="new_child">ADD</div>
+            <div class="item" data-funcall="">COLOR
+                <div class="submenu">
+                    ${(function() {
+                        var result = '';
+                        for (let i = 1; i < that.colors.length; i++) {
+                            result += `
+                            <div class="item" data-funcall="set_color%${i}">
+                                <span style="background-color:${that.colors[i]};">${that.colors[0][i-1]}</span>
+                            </div>`;
+                        }
+                        return result;
+                    }())}
                 </div>
-                <div class="item" data-funcall="">EDIT
-                    <div class="submenu">
-                        <div class="item" data-funcall="set_info">INFO</div>
-                        <div class="item" data-funcall="set_date">DATE</div>
-                    </div>
+            </div>
+            <div class="item" data-funcall="">EDIT
+                <div class="submenu">
+                    <div class="item" data-funcall="set_info">INFO</div>
+                    <div class="item" data-funcall="set_date">DATE</div>
                 </div>
-                <div class="item" data-funcall="remove">REMOVE</div>
-            </div>`;
+            </div>
+            <div class="item" data-funcall="remove">REMOVE</div>
+        </div>`;
         contextmenu_container.style.display = 'block';
         contextmenu = contextmenu_container.children[0];
         window.addEventListener('mousedown', hide_contextmenu);
@@ -294,22 +301,24 @@ var root;
     // document ready code
     document.addEventListener("DOMContentLoaded", function() {
 
-        root = new Root('root', []);
-        function add_children(node, depth, address) {
+        root = new Root();
+        function add_children(node, depth) {
             if (depth <= 0) {
                 return;
             }
-            node.children = [new Node((address.join('')+'0').split(''), depth),
-                            new Node((address.join('')+'1').split(''), depth),
-                            new Node((address.join('')+'2').split(''), depth)];
-            add_children(node.children[0], depth - 1, (address.join('')+'0').split(''));
-            add_children(node.children[1], depth - 1, (address.join('')+'1').split(''));
-            add_children(node.children[2], depth - 1, (address.join('')+'2').split(''));
+            node.add_child(new Node('0'));
+            node.add_child(new Node('1'));
+            node.add_child(new Node('2'));
+            add_children(node.children[0], depth-1);
+            add_children(node.children[1], depth-1);
+            add_children(node.children[2], depth-1);
         }
-        add_children(root, 3, []);
+        // add_children(root, 3, []);
 
         // displaying Nodes
+        root.read_recipie();
         root.dom_update();
+        // root.save_recipe();
 
     });
 
