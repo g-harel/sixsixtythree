@@ -1,16 +1,20 @@
 /*jshint esversion: 6 */
 
-// TODO simplify/update Root constructor
-// TODO update recipie read/write
+// TODO instructions pass through root
+// TODO dialogs
 
 var root;
 
 (function() {
 
     // calculates the number of days between two days using the moment library
-    moment.day_difference = function(date) {
+    function day_difference(date) {
         return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
-    };
+    }
+
+    function esc(string) {
+        return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
 
     // Root Object constructor
     function Root() {
@@ -20,7 +24,7 @@ var root;
     // saves the Root to localStorage
     Root.prototype.save_recipe = function() {
         localStorage.root = JSON.stringify(this.children, function(key, value) {
-            if (key === 'address') {
+            if (key === 'address' || value === undefined) {
                 return undefined;
             } else {
                 return value;
@@ -30,9 +34,10 @@ var root;
 
     // reads the Root from localStorage
     Root.prototype.read_recipie = function() {
+        this.children = [];
         var temp = JSON.parse(localStorage.root);
         for (var i = 0; i < temp.length; i++) {
-            nodify(root, temp[i]);
+            nodify(this, temp[i]);
         }
         function nodify(parent, node) {
             var temporary =  new Node(node.info, node.completed, node.due, node.color, node.collapsed),
@@ -139,7 +144,7 @@ var root;
 
     // returns an array [innerHTML, style.cssText] for the title
     Node.prototype.get_title = function() {
-        var temp = [`${moment.day_difference(this.due)}d ${this.info}`, ''];
+        var temp = [`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, ''];
         if (this.completed) {
             temp[1] += 'opacity:0.2;';
         } else {
@@ -306,20 +311,21 @@ var root;
             if (depth <= 0) {
                 return;
             }
-            node.add_child(new Node('0'));
-            node.add_child(new Node('1'));
-            node.add_child(new Node('2'));
+            node.add_child(new Node('<b>' + Math.random() + '</b>'));
+            node.add_child(new Node(Math.random()));
+            node.add_child(new Node(Math.random()));
             add_children(node.children[0], depth-1);
             add_children(node.children[1], depth-1);
             add_children(node.children[2], depth-1);
         }
-        // add_children(root, 3, []);
+        add_children(root, 3, []);
 
         // displaying Nodes
+        var start = new Date().getTime();
+        root.save_recipe();
         root.read_recipie();
         root.dom_update();
-        // root.save_recipe();
-
+        console.log(new Date().getTime() - start);
     });
 
 }());
