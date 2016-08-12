@@ -1,7 +1,8 @@
 /*jshint esversion: 6 */
 
 // TODO dialogs
-// TODO instructions pass through root
+// TODO instructions pass through root/createElement for Nodes (find a way to use this in listener functions)
+// TODO listener bug when all children removed
 
 var root;
 
@@ -21,6 +22,8 @@ var root;
     function Root() {
         this.children = [];
         this.show_completed = true;
+        this.show_buttons = false;
+        this.button_update();
     }
 
     // saves the Root to localStorage
@@ -67,8 +70,46 @@ var root;
         return temp;
     };
 
+    // updates button text and adds listeners
+    Root.prototype.button_update = function() {
+        var button_container = document.getElementById('buttons'),
+            buttons = {
+                new_parent: document.createElement('div'),
+                toggle_show_completed: document.createElement('div'),
+                toggle_show_buttons: document.createElement('div')
+            };
+        button_container.innerHTML = '';
+        buttons.new_parent.innerHTML = 'NEW PARENT';
+        buttons.toggle_show_completed.innerHTML = this.show_completed?'HIDE COMPLETED':'SHOW COMPLETED';
+        buttons.toggle_show_buttons.innerHTML = this.show_buttons?'HIDE BUTTONS':'SHOW BUTTONS';
+        Object.keys(buttons).forEach(function(key) {
+            buttons[key].className = 'button';
+            button_container.appendChild(buttons[key]);
+        });
+        buttons.new_parent.removeEventListener('click', undefined);
+        buttons.new_parent.addEventListener('click', undefined);
+        buttons.toggle_show_completed.removeEventListener('click', this.toggle_show_completed);
+        buttons.toggle_show_completed.addEventListener('click', this.toggle_show_completed);
+        buttons.toggle_show_buttons.removeEventListener('click', this.toggle_show_buttons);
+        buttons.toggle_show_buttons.addEventListener('click', this.toggle_show_buttons);
+    };
+
+    // toggles the show completed variable and refreshes the dom
+    Root.prototype.toggle_show_completed = function(e) {
+        root.show_completed = root.show_completed?false:true;
+        root.button_update();
+        root.node_update();
+    };
+
+    // toggles the show buttons variable and refreshes the dom
+    Root.prototype.toggle_show_buttons = function(e) {
+        root.show_buttons = root.show_buttons?false:true;
+        root.button_update();
+        root.node_update();
+    };
+
     // updates the tree
-    Root.prototype.dom_update = function() {
+    Root.prototype.node_update = function() {
         var result = '<ul>';
         for (let i = 0; i < this.children.length; i++) {
             if (this.children[i]) {
@@ -77,18 +118,19 @@ var root;
         }
         result += '</ul>';
         document.getElementById('tree_container').innerHTML = result;
-        this.refresh_listeners();
+        this.refresh_node_listeners();
     };
 
     // event listeners for right clicks on nodes and their collapse button
-    Root.prototype.refresh_listeners = function () {
+    Root.prototype.refresh_node_listeners = function () {
         var that = this,
             node = document.getElementsByClassName('node');
         for (var i = 0; i < node.length; i++) {
-            node[i].children[1].removeEventListener('contextmenu', item_contextmenu);
-            node[i].children[0].removeEventListener('click', toggle);
-            node[i].children[1].addEventListener('contextmenu', item_contextmenu);
-            node[i].children[0].addEventListener('click', toggle);
+            let elem = node[i];
+            elem.children[1].removeEventListener('contextmenu', item_contextmenu);
+            elem.children[1].addEventListener('contextmenu', item_contextmenu);
+            elem.children[0].removeEventListener('click', toggle);
+            elem.children[0].addEventListener('click', toggle);
         }
         function item_contextmenu(e) {
             e.preventDefault();
@@ -200,7 +242,7 @@ var root;
     };
 
     // updates the DOM elements of this Node and optionally the children
-    Node.prototype.dom_update = function(refresh_children) {
+    Node.prototype.node_update = function(refresh_children) {
         var elements = document.getElementsByClassName(this.address.join(''));
         for (let i = 0; i < elements.length; i++) {
             var elem = elements[i],
@@ -216,7 +258,7 @@ var root;
             elem.children[2].style.cssText = children[1];
             if (refresh_children) {
                 elem.children[2].innerHTML = children[0];
-                window.root.refresh_listeners();
+                window.root.refresh_node_listeners();
             }
         }
     };
@@ -224,13 +266,13 @@ var root;
     // toggle completion
     Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
-        this.dom_update(false);
+        this.node_update(false);
     };
 
     // toggle collapsed
     Node.prototype.toggle_collapse = function() {
         this.collapsed = this.collapsed?false:true;
-        this.dom_update(false);
+        this.node_update(false);
     };
 
     // add a child node
@@ -241,7 +283,7 @@ var root;
     // set overlay color
     Node.prototype.set_color = function(color) {
         this.color = this.colors[color];
-        this.dom_update(false);
+        this.node_update(false);
     };
 
     // change the info property
@@ -258,7 +300,7 @@ var root;
     Node.prototype.remove = function() {
         var parent = window.root.access(this.address.slice(0,-1));
         parent.children[this.address[this.address.length-1]] = undefined;
-        parent.dom_update(true);
+        parent.node_update(true);
     };
 
     // function to draw contextmenu for this Node
@@ -327,7 +369,7 @@ var root;
         var start = new Date().getTime();
         root.save_recipe();
         root.read_recipie();
-        root.dom_update();
+        root.node_update();
         console.log(new Date().getTime() - start);
     });
 
