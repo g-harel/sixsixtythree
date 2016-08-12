@@ -1,7 +1,7 @@
 /*jshint esversion: 6 */
 
-// TODO instructions pass through root
 // TODO dialogs
+// TODO instructions pass through root
 
 var root;
 
@@ -12,6 +12,7 @@ var root;
         return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
     }
 
+    // kinda prevents xss
     function esc(string) {
         return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
@@ -19,6 +20,7 @@ var root;
     // Root Object constructor
     function Root() {
         this.children = [];
+        this.show_completed = true;
     }
 
     // saves the Root to localStorage
@@ -78,15 +80,15 @@ var root;
         this.refresh_listeners();
     };
 
-    // event listeners for right clicks on items and the collapse button
+    // event listeners for right clicks on nodes and their collapse button
     Root.prototype.refresh_listeners = function () {
         var that = this,
-            items = document.getElementsByClassName('node');
-        for (var i = 0; i < items.length; i++) {
-            items[i].children[1].removeEventListener('contextmenu', item_contextmenu);
-            items[i].children[0].removeEventListener('click', toggle);
-            items[i].children[1].addEventListener('contextmenu', item_contextmenu);
-            items[i].children[0].addEventListener('click', toggle);
+            node = document.getElementsByClassName('node');
+        for (var i = 0; i < node.length; i++) {
+            node[i].children[1].removeEventListener('contextmenu', item_contextmenu);
+            node[i].children[0].removeEventListener('click', toggle);
+            node[i].children[1].addEventListener('contextmenu', item_contextmenu);
+            node[i].children[0].addEventListener('click', toggle);
         }
         function item_contextmenu(e) {
             e.preventDefault();
@@ -119,6 +121,15 @@ var root;
         return temp;
     };
 
+    // returns an array [innerHTML, style.cssText] for the list element
+    Node.prototype.get_visibility = function() {
+        var temp = ['', ''];
+        if (this.completed && !root.show_completed) {
+            temp[1] = 'display:none;';
+        }
+        return temp;
+    };
+
     // returns an array [innerHTML, style.cssText] for the symbol
     Node.prototype.get_symbol = function() {
         var temp;
@@ -126,18 +137,11 @@ var root;
             temp = ['&nbsp;', 'pointer-events:none;'];
         } else if (this.collapsed) {
             temp = ['+', ''];
-            if (this.completed) {
-                temp[1] = 'pointer-events:none;';
-            } else {
-                temp[1] = 'pointer-events:all;';
-            }
         } else {
-            temp = ['-', 'pointer-events:all;'];
+            temp = ['-', ''];
         }
         if (this.completed) {
-            temp[1] += 'opacity:0.1;';
-        } else {
-            temp[1] += 'opacity:1;';
+            temp[1] += 'color:rgba(0,0,0,0.2);';
         }
         return temp;
     };
@@ -146,9 +150,7 @@ var root;
     Node.prototype.get_title = function() {
         var temp = [`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, ''];
         if (this.completed) {
-            temp[1] += 'opacity:0.2;';
-        } else {
-            temp[1] += 'opacity:1;';
+            temp[1] += 'color:rgba(0,0,0,0.2);';
         }
         temp[1] += `background-color:${this.color};`;
         return temp;
@@ -167,20 +169,22 @@ var root;
             temp[0] += '</ul>';
         }
         if (this.collapsed) {
-            temp[1] = 'display:none;';
-        } else {
-            temp[1] = 'display:inline;';
+            temp[1] += 'display:none;';
+        }
+        if (this.completed) {
+            temp[1] += 'color:rgba(0,0,0,0.2);';
         }
         return temp;
     };
 
     // formatted html string of the Node
     Node.prototype.to_string = function() {
-        var symbol = this.get_symbol(),
+        var visibility = this.get_visibility(),
+            symbol = this.get_symbol(),
             title = this.get_title(),
             children = this.get_children(true);
         return `
-        <li>
+        <li style="${visibility[1]}">
             <span class="${this.address.join('')} node">
                 <span class="symbol" style="${symbol[1]}">
                     ${symbol[0]}
@@ -200,9 +204,11 @@ var root;
         var elements = document.getElementsByClassName(this.address.join(''));
         for (let i = 0; i < elements.length; i++) {
             var elem = elements[i],
+                visibility = this.get_visibility(),
                 symbol = this.get_symbol(),
                 title = this.get_title(),
                 children = this.get_children(refresh_children);
+            elem.parentNode.style.cssText = visibility[1];
             elem.children[0].style.cssText = symbol[1];
             elem.children[0].innerHTML = symbol[0];
             elem.children[1].style.cssText = title[1];
@@ -218,9 +224,6 @@ var root;
     // toggle completion
     Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
-        if (this.completed) {
-            this.collapsed = true;
-        }
         this.dom_update(false);
     };
 

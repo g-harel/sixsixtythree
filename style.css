@@ -44,16 +44,10 @@ body {
 
 .symbol:hover {
     cursor: pointer;
-    opacity: 0.5;
-}
-
-.add_child:hover {
-    cursor: pointer;
-    opacity: 0.5;
 }
 
 .title:hover {
-    opacity: 0.8;
+    cursor: default;
 }
 
 .item:hover > .submenu {
