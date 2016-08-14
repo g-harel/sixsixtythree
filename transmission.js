@@ -1,8 +1,8 @@
 /*jshint esversion: 6 */
 
 // TODO dialogs
-// TODO instructions pass through root/createElement for Nodes (find a way to use this in listener functions)
-// TODO listener bug when all children removed
+// TODO listener on parent => no need to refresh using e.srcElement
+// TODO interactions with inline buttons
 
 var root;
 
@@ -10,6 +10,7 @@ var root;
 
     // calculates the number of days between two days using the moment library
     function day_difference(date) {
+        return 0;
         return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
     }
 
@@ -85,6 +86,7 @@ var root;
         Object.keys(buttons).forEach(function(key) {
             buttons[key].className = 'button';
             button_container.appendChild(buttons[key]);
+            button_container.appendChild(buttons[key]);
         });
         buttons.new_parent.removeEventListener('click', undefined);
         buttons.new_parent.addEventListener('click', undefined);
@@ -144,7 +146,7 @@ var root;
     // Node Object contructor
     function Node(info, completed, due, color, collapsed) {
         this.info = info || '663663663663';
-        this.due = due || moment().format('DD/MM/YYYY');
+        this.due = due || '13/08/2016' || moment().format('DD/MM/YYYY');
         this.collapsed = collapsed?true:false;
         this.completed = completed?true:false;
         this.color = color || 'transparent';
@@ -163,101 +165,114 @@ var root;
         return temp;
     };
 
-    // returns an array [innerHTML, style.cssText] for the list element
-    Node.prototype.get_visibility = function() {
-        var temp = ['', ''];
+    // returns an array of [innerHTML, style.cssText] for each part of the element
+    Node.prototype.to_element = function(refresh) {
+        // outer
+        var temp = [];
+        temp.outer = ['', ''];
         if (this.completed && !root.show_completed) {
-            temp[1] = 'display:none;';
+            temp.outer[1] = 'display:none;';
         }
-        return temp;
-    };
-
-    // returns an array [innerHTML, style.cssText] for the symbol
-    Node.prototype.get_symbol = function() {
-        var temp;
+        // symbol
         if (!this.children.length) {
-            temp = ['&nbsp;', 'pointer-events:none;'];
+            temp.symbol = ['&nbsp;', 'pointer-events:none;'];
         } else if (this.collapsed) {
-            temp = ['+', ''];
+            temp.symbol = ['+', ''];
         } else {
-            temp = ['-', ''];
+            temp.symbol = ['-', ''];
         }
         if (this.completed) {
-            temp[1] += 'color:rgba(0,0,0,0.2);';
+            temp.symbol[1] += 'color:rgba(0,0,0,0.2);';
         }
-        return temp;
-    };
-
-    // returns an array [innerHTML, style.cssText] for the title
-    Node.prototype.get_title = function() {
-        var temp = [`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, ''];
+        // title
+        temp.title = [`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, ''];
         if (this.completed) {
-            temp[1] += 'color:rgba(0,0,0,0.2);';
+            temp.title[1] += 'color:rgba(0,0,0,0.2);';
         }
-        temp[1] += `background-color:${this.color};`;
-        return temp;
-    };
-
-    // returns an array [innerHTML, style.cssText] for the children
-    Node.prototype.get_children = function(refresh) {
-        var temp = ['', ''];
+        temp.title[1] += `background-color:${this.color};`;
+        // children
+        temp.children = ['', ''];
         if (refresh) {
-            temp[0] = '<ul>';
+            temp.children[0] = '<ul>';
             for (let i = 0; i < this.children.length; i++) {
                 if (this.children[i]) {
-                    temp[0] += this.children[i].to_string();
+                    temp.children[0] += this.children[i].to_string();
                 }
             }
-            temp[0] += '</ul>';
+            temp.children[0] += '</ul>';
         }
         if (this.collapsed) {
-            temp[1] += 'display:none;';
+            temp.children[1] += 'display:none;';
         }
         if (this.completed) {
-            temp[1] += 'color:rgba(0,0,0,0.2);';
+            temp.children[1] += 'color:rgba(0,0,0,0.2);';
+        }
+        // buttons
+        temp.buttons = ['', ''];
+        temp.buttons[0] = this.completed?'NOT DONE':'DONE';
+        if (!root.show_buttons) {
+            temp.buttons[1] += 'display:none;';
+        }
+        // colors
+        temp.color_menu = ['', ''];
+        for (let i = 1; i < this.colors.length; i++) {
+            temp.color_menu[0] += `
+            <div class="node_subitem" data-funcall="set_color%${i}">
+                <span style="background-color:${this.colors[i]};">${this.colors[0][i-1]}</span>
+            </div>`;
         }
         return temp;
     };
 
     // formatted html string of the Node
     Node.prototype.to_string = function() {
-        var visibility = this.get_visibility(),
-            symbol = this.get_symbol(),
-            title = this.get_title(),
-            children = this.get_children(true);
+        var that = this,
+            element = that.to_element(true);
         return `
-        <li style="${visibility[1]}">
-            <span class="${this.address.join('')} node">
-                <span class="symbol" style="${symbol[1]}">
-                    ${symbol[0]}
+        <li style="${element.outer[1]}">
+            <span class="${that.address.join('')} node">
+                <span class="symbol" style="${element.symbol[1]}">
+                    ${element.symbol[0]}
                 </span>
-                <span class="title" style="${title[1]}">
-                     ${title[0]}
+                <span class="title" style="${element.title[1]}">
+                    ${element.title[0]}
                 </span>
-                <span class="children" style="${children[1]}">
-                    ${children[0]}
+                <div class="buttons" style="${element.buttons[1]}">
+                    <div class="node_button" data-funcall="toggle_completion">
+                        ${element.buttons[0]}
+                    </div>
+                    <div class="node_button" data-funcall="new_child">ADD</div>
+                    <div class="node_button" data-funcall="">COLOR
+                        <div class="submenu">
+                            ${element.color_menu[0]}
+                        </div>
+                    </div>
+                    <div class="node_button" data-funcall="edit">EDIT</div>
+                    <div class="node_button" data-funcall="remove">REMOVE</div>
+                </div>
+                <span class="children" style="${element.children[1]}">
+                    ${element.children[0]}
                 </span>
             </span>
         </li>`;
     };
 
-    // updates the DOM elements of this Node and optionally the children
+    // updates the DOM elements of this Node's instances and optionally the children
     Node.prototype.node_update = function(refresh_children) {
-        var elements = document.getElementsByClassName(this.address.join(''));
-        for (let i = 0; i < elements.length; i++) {
-            var elem = elements[i],
-                visibility = this.get_visibility(),
-                symbol = this.get_symbol(),
-                title = this.get_title(),
-                children = this.get_children(refresh_children);
-            elem.parentNode.style.cssText = visibility[1];
-            elem.children[0].style.cssText = symbol[1];
-            elem.children[0].innerHTML = symbol[0];
-            elem.children[1].style.cssText = title[1];
-            elem.children[1].innerHTML = title[0];
-            elem.children[2].style.cssText = children[1];
+        var instance = document.getElementsByClassName(this.address.join(''));
+        for (let i = 0; i < instance.length; i++) {
+            var inst = instance[i],
+                element = this.to_element(refresh_children);
+            inst.parentNode.style.cssText = element.outer[1];
+            inst.children[0].style.cssText = element.symbol[1];
+            inst.children[0].innerHTML = element.symbol[0];
+            inst.children[1].style.cssText = element.title[1];
+            inst.children[1].innerHTML = element.title[0];
+            inst.children[2].style.cssText = element.buttons[1];
+            inst.children[2].children[0].innerHTML = element.buttons[0];
+            inst.children[3].style.cssText = element.children[1];
             if (refresh_children) {
-                elem.children[2].innerHTML = children[0];
+                inst.children[3].innerHTML = element.children[0];
                 window.root.refresh_node_listeners();
             }
         }
@@ -286,14 +301,9 @@ var root;
         this.node_update(false);
     };
 
-    // change the info property
-    Node.prototype.set_info = function() {
-        console.log('set_info');
-    };
-
-    // change the date property
-    Node.prototype.set_date = function() {
-        console.log('set_date');
+    // edit the node
+    Node.prototype.edit = function() {
+        console.log('edit');
     };
 
     // delete this node
@@ -305,32 +315,21 @@ var root;
 
     // function to draw contextmenu for this Node
     Node.prototype.contextmenu = function(x, y) {
-        var that = this;
-        var contextmenu_container = document.getElementById('contextmenu_container');
+        var that = this,
+            contextmenu_container = document.getElementById('contextmenu_container'),
+            element = that.to_element(false);
         contextmenu_container.innerHTML = `
         <div id="contextmenu" style="top:${y}px;left:${x}px;">
-            <div class="item" data-funcall="toggle_completion">${this.completed?'NOT DONE':'DONE'}</div>
+            <div class="item" data-funcall="toggle_completion">
+                ${element.buttons[0]}
+            </div>
             <div class="item" data-funcall="new_child">ADD</div>
             <div class="item" data-funcall="">COLOR
                 <div class="submenu">
-                    ${(function() {
-                        var result = '';
-                        for (let i = 1; i < that.colors.length; i++) {
-                            result += `
-                            <div class="item" data-funcall="set_color%${i}">
-                                <span style="background-color:${that.colors[i]};">${that.colors[0][i-1]}</span>
-                            </div>`;
-                        }
-                        return result;
-                    }())}
+                    ${element.color_menu[0]}
                 </div>
             </div>
-            <div class="item" data-funcall="">EDIT
-                <div class="submenu">
-                    <div class="item" data-funcall="set_info">INFO</div>
-                    <div class="item" data-funcall="set_date">DATE</div>
-                </div>
-            </div>
+            <div class="item" data-funcall="edit">EDIT</div>
             <div class="item" data-funcall="remove">REMOVE</div>
         </div>`;
         contextmenu_container.style.display = 'block';
