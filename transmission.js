@@ -2,28 +2,42 @@
 
 // TODO dialogs
 // TODO listener on parent => no need to refresh using e.srcElement
-// TODO interactions with inline buttons
 // TODO make date be taken from info
 
 var root;
 
 (function() {
 
-    // calculates the number of days between two days using the moment library
-    function day_difference(date) {
-        return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
-    }
+    // document ready code
+    document.addEventListener("DOMContentLoaded", function() {
 
-    // kinda prevents xss
-    function esc(string) {
-        return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+        root = new Root();
+        function add_children(node, depth) {
+            if (depth <= 0) {
+                return;
+            }
+            node.add_child(new Node(' '/*'<b>' + Math.random() + '</b>'*/));
+            node.add_child(new Node(' '/*Math.random()*/));
+            node.add_child(new Node(' '/*Math.random()*/));
+            add_children(node.children[0], depth-1);
+            add_children(node.children[1], depth-1);
+            add_children(node.children[2], depth-1);
+        }
+        add_children(root, 3, []);
+
+        // displaying Nodes
+        var start = new Date().getTime();
+        root.save_recipe();
+        root.read_recipie();
+        root.node_update();
+        console.log(new Date().getTime() - start);
+        
+    });
 
     // Root Object constructor
     function Root() {
         this.children = [];
         this.show_completed = true;
-        this.show_buttons = false;
         this.button_update();
     }
 
@@ -76,13 +90,11 @@ var root;
         var button_container = document.getElementById('buttons'),
             buttons = {
                 new_parent: document.createElement('div'),
-                toggle_show_completed: document.createElement('div'),
-                toggle_show_buttons: document.createElement('div')
+                toggle_show_completed: document.createElement('div')
             };
         button_container.innerHTML = '';
         buttons.new_parent.innerHTML = 'NEW PARENT';
         buttons.toggle_show_completed.innerHTML = this.show_completed?'HIDE COMPLETED':'SHOW COMPLETED';
-        buttons.toggle_show_buttons.innerHTML = this.show_buttons?'HIDE BUTTONS':'SHOW BUTTONS';
         Object.keys(buttons).forEach(function(key) {
             buttons[key].className = 'button';
             button_container.appendChild(buttons[key]);
@@ -92,20 +104,11 @@ var root;
         buttons.new_parent.addEventListener('click', undefined);
         buttons.toggle_show_completed.removeEventListener('click', this.toggle_show_completed);
         buttons.toggle_show_completed.addEventListener('click', this.toggle_show_completed);
-        buttons.toggle_show_buttons.removeEventListener('click', this.toggle_show_buttons);
-        buttons.toggle_show_buttons.addEventListener('click', this.toggle_show_buttons);
     };
 
     // toggles the show completed variable and refreshes the dom
     Root.prototype.toggle_show_completed = function(e) {
         root.show_completed = root.show_completed?false:true;
-        root.button_update();
-        root.node_update();
-    };
-
-    // toggles the show buttons variable and refreshes the dom
-    Root.prototype.toggle_show_buttons = function(e) {
-        root.show_buttons = root.show_buttons?false:true;
         root.button_update();
         root.node_update();
     };
@@ -129,8 +132,8 @@ var root;
             node = document.getElementsByClassName('node');
         for (var i = 0; i < node.length; i++) {
             let elem = node[i];
-            elem.children[1].removeEventListener('contextmenu', item_contextmenu);
-            elem.children[1].addEventListener('contextmenu', item_contextmenu);
+            elem.children[1].removeEventListener('click', item_contextmenu);
+            elem.children[1].addEventListener('click', item_contextmenu);
             elem.children[0].removeEventListener('click', toggle);
             elem.children[0].addEventListener('click', toggle);
         }
@@ -146,7 +149,7 @@ var root;
     // Node Object contructor
     function Node(info, completed, due, color, collapsed) {
         this.info = info || '663663663663';
-        this.due = due || '13/08/2016' || moment().format('DD/MM/YYYY');
+        this.due = due || moment().format('DD/MM/YYYY');
         this.collapsed = collapsed?true:false;
         this.completed = completed?true:false;
         this.color = color || 'transparent';
@@ -206,33 +209,6 @@ var root;
             temp.children.cssText += 'display:none;';
         }
         //
-        // colors
-        temp.color_menu = {innerHTML:'', cssText:''};
-        for (let i = 1; i < this.colors.length; i++) {
-            temp.color_menu.innerHTML += `
-            <div class="node_subitem" data-funcall="set_color%${i}">
-                <span style="background-color:${this.colors[i]};">${this.colors[0][i-1]}</span>
-            </div>`;
-        }
-        //
-        // buttons
-        temp.buttons = {innerHTML:'', cssText:'', completed_innerHTML: this.completed?'NOT DONE':'DONE'};
-        temp.buttons.innerHTML = `
-            <div class="node_button" data-funcall="toggle_completion">
-                ${temp.buttons.completed_innerHTML}
-            </div>
-            <div class="node_button" data-funcall="new_child">ADD</div>
-            <div class="node_button" data-funcall="">COLOR
-                <div class="submenu">
-                    ${temp.color_menu.innerHTML}
-                </div>
-            </div>
-            <div class="node_button" data-funcall="edit">EDIT</div>
-            <div class="node_button" data-funcall="remove">REMOVE</div>`;
-        if (!root.show_buttons) {
-            temp.buttons.cssText += 'display:none;';
-        }
-        //
         return temp;
     };
 
@@ -249,9 +225,6 @@ var root;
                 <span class="title" style="${element.title.cssText}">
                     ${element.title.innerHTML}
                 </span>
-                <div class="buttons" style="${element.buttons.cssText}">
-                    ${element.buttons.innerHTML}
-                </div>
                 <span class="children" style="${element.children.cssText}">
                     ${element.children.innerHTML}
                 </span>
@@ -270,14 +243,53 @@ var root;
             inst.children[0].innerHTML = element.symbol.innerHTML;
             inst.children[1].style.cssText = element.title.cssText;
             inst.children[1].innerHTML = element.title.innerHTML;
-            inst.children[2].style.cssText = element.buttons.cssText;
-            inst.children[2].children[0].innerHTML = element.buttons.toggle_done;
-            inst.children[3].style.cssText = element.children.cssText;
+            inst.children[2].style.cssText = element.children.cssText;
             if (refresh_children) {
-                inst.children[3].innerHTML = element.children.innerHTML;
+                inst.children[2].innerHTML = element.children.innerHTML;
                 window.root.refresh_node_listeners();
             }
         }
+    };
+
+    // function to draw contextmenu for this Node
+    Node.prototype.contextmenu = function(x, y) {
+        var contextmenu_container = document.getElementById('contextmenu_container'),
+            element = this.to_element(false),
+            colors = '';
+        for (let i = 1; i < this.colors.length; i++) {
+            colors += `
+            <div class="item" data-funcall="set_color%${i}">
+                <span style="background-color:${this.colors[i]};">${this.colors[0][i-1]}</span>
+            </div>`;
+        }
+        contextmenu_container.innerHTML = `
+            <div id="contextmenu" style="top:${y}px;left:${x}px;">
+                <div class="item" data-funcall="toggle_completion">
+                    ${this.completed?'NOT DONE':'DONE'}
+                </div>
+                <div class="item" data-funcall="new_child">ADD</div>
+                <div class="item" data-funcall="">COLOR
+                    <div class="submenu">
+                        ${colors}
+                    </div>
+                </div>
+                <div class="item" data-funcall="edit">EDIT</div>
+                <div class="item" data-funcall="remove">REMOVE</div>
+            </div>`;
+        contextmenu_container.style.display = 'block';
+        contextmenu = contextmenu_container.children[0];
+        window.addEventListener('mousedown', hide_contextmenu);
+        function hide_contextmenu(e) {
+            contextmenu_container.style.display = 'none';
+            window.removeEventListener('mousedown', hide_contextmenu);
+        }
+        let that = this;
+        contextmenu.addEventListener('mousedown', function(e) {
+            var param = e.srcElement.getAttribute('data-funcall').split('%');
+            if(param[0]) {
+                that[param[0]](param[1]||false);
+            }
+        });
     };
 
     // toggle completion
@@ -315,63 +327,14 @@ var root;
         parent.node_update(true);
     };
 
-    // function to draw contextmenu for this Node
-    Node.prototype.contextmenu = function(x, y) {
-        var that = this,
-            contextmenu_container = document.getElementById('contextmenu_container'),
-            element = that.to_element(false);
-        contextmenu_container.innerHTML = `
-        <div id="contextmenu" style="top:${y}px;left:${x}px;">
-            <div class="item" data-funcall="toggle_completion">
-                ${element.buttons.completed_innerHTML}
-            </div>
-            <div class="item" data-funcall="new_child">ADD</div>
-            <div class="item" data-funcall="">COLOR
-                <div class="submenu">
-                    ${element.color_menu.innerHTML}
-                </div>
-            </div>
-            <div class="item" data-funcall="edit">EDIT</div>
-            <div class="item" data-funcall="remove">REMOVE</div>
-        </div>`;
-        contextmenu_container.style.display = 'block';
-        contextmenu = contextmenu_container.children[0];
-        window.addEventListener('mousedown', hide_contextmenu);
-        function hide_contextmenu(e) {
-            contextmenu_container.style.display = 'none';
-            window.removeEventListener('mousedown', hide_contextmenu);
-        }
-        contextmenu.addEventListener('mousedown', function(e) {
-            var param = e.srcElement.getAttribute('data-funcall').split('%');
-            if(param[0]) {
-                that[param[0]](param[1]||false);
-            }
-        });
-    };
+    // calculates the number of days between two dates using the moment library
+    function day_difference(date) {
+        return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
+    }
 
-    // document ready code
-    document.addEventListener("DOMContentLoaded", function() {
-
-        root = new Root();
-        function add_children(node, depth) {
-            if (depth <= 0) {
-                return;
-            }
-            node.add_child(new Node(' '/*'<b>' + Math.random() + '</b>'*/));
-            node.add_child(new Node(' '/*Math.random()*/));
-            node.add_child(new Node(' '/*Math.random()*/));
-            add_children(node.children[0], depth-1);
-            add_children(node.children[1], depth-1);
-            add_children(node.children[2], depth-1);
-        }
-        add_children(root, 3, []);
-
-        // displaying Nodes
-        var start = new Date().getTime();
-        root.save_recipe();
-        root.read_recipie();
-        root.node_update();
-        console.log(new Date().getTime() - start);
-    });
+    // prevents html tags to work when user inputted data is shown
+    function esc(string) {
+        return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
 
 }());

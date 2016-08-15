@@ -17,31 +17,19 @@ body {
     height: 100%;
 }
 
-.node_button {
-    margin: 0px -30px 0px 20px;
-    text-decoration: underline;
-    padding: 0px 5px 0px 5px;
-    color: rgba(0,0,0,0.2);
-    display: inline-block;
-    text-align: center;
-    font-size: 16px;
-    cursor: pointer;
-    min-width: 50px;
-}
-
 .item {
     text-align: center;
     font-size: 16px;
     cursor: pointer;
     padding: 3px;
     height: 20px;
-    width: 80px;
 }
 
 .submenu {
     display: none;
     padding: 0px;
-    left: 86px;
+    widows: 200px;
+    left: 80px;
     top: -2px;
 }
 
@@ -86,7 +74,6 @@ body {
 
 .item:hover > .submenu {
     display: block;
-    width: 80px;
 }
 
 #contextmenu, .submenu {
@@ -95,6 +82,7 @@ body {
     background-color: white;
     position: absolute;
     z-index: 999;
+    width: 80px;
 }
 
 #root_container {
