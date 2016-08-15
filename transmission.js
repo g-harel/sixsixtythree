@@ -3,6 +3,7 @@
 // TODO dialogs
 // TODO listener on parent => no need to refresh using e.srcElement
 // TODO interactions with inline buttons
+// TODO make date be taken from info
 
 var root;
 
@@ -10,7 +11,6 @@ var root;
 
     // calculates the number of days between two days using the moment library
     function day_difference(date) {
-        return 0;
         return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
     }
 
@@ -167,60 +167,72 @@ var root;
 
     // returns an array of [innerHTML, style.cssText] for each part of the element
     Node.prototype.to_element = function(refresh) {
+        //
         // outer
-        var temp = [];
-        temp.outer = ['', ''];
+        var temp = {};
+        temp.outer = {innerHTML: '', cssText: ''};
         if (this.completed && !root.show_completed) {
-            temp.outer[1] = 'display:none;';
+            temp.outer.cssText = 'display:none;';
         }
+        if (this.completed) {
+            temp.outer.cssText += 'color:rgba(0,0,0,0.2);';
+        }
+        //
         // symbol
         if (!this.children.length) {
-            temp.symbol = ['&nbsp;', 'pointer-events:none;'];
+            temp.symbol = {innerHTML:'&nbsp;', cssText:'pointer-events:none;'};
         } else if (this.collapsed) {
-            temp.symbol = ['+', ''];
+            temp.symbol = {innerHTML:'+', cssText: ''};
         } else {
-            temp.symbol = ['-', ''];
+            temp.symbol = {innerHTML:'-', cssText: ''};
         }
-        if (this.completed) {
-            temp.symbol[1] += 'color:rgba(0,0,0,0.2);';
-        }
+        //
         // title
-        temp.title = [`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, ''];
-        if (this.completed) {
-            temp.title[1] += 'color:rgba(0,0,0,0.2);';
-        }
-        temp.title[1] += `background-color:${this.color};`;
+        temp.title = {innerHTML:`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, cssText:''};
+        temp.title.cssText += `background-color:${this.color};`;
+        //
         // children
-        temp.children = ['', ''];
+        temp.children = {innerHTML:'', cssText:''};
         if (refresh) {
-            temp.children[0] = '<ul>';
+            temp.children.innerHTML = '<ul>';
             for (let i = 0; i < this.children.length; i++) {
                 if (this.children[i]) {
-                    temp.children[0] += this.children[i].to_string();
+                    temp.children.innerHTML += this.children[i].to_string();
                 }
             }
-            temp.children[0] += '</ul>';
+            temp.children.innerHTML += '</ul>';
         }
         if (this.collapsed) {
-            temp.children[1] += 'display:none;';
+            temp.children.cssText += 'display:none;';
         }
-        if (this.completed) {
-            temp.children[1] += 'color:rgba(0,0,0,0.2);';
-        }
-        // buttons
-        temp.buttons = ['', ''];
-        temp.buttons[0] = this.completed?'NOT DONE':'DONE';
-        if (!root.show_buttons) {
-            temp.buttons[1] += 'display:none;';
-        }
+        //
         // colors
-        temp.color_menu = ['', ''];
+        temp.color_menu = {innerHTML:'', cssText:''};
         for (let i = 1; i < this.colors.length; i++) {
-            temp.color_menu[0] += `
+            temp.color_menu.innerHTML += `
             <div class="node_subitem" data-funcall="set_color%${i}">
                 <span style="background-color:${this.colors[i]};">${this.colors[0][i-1]}</span>
             </div>`;
         }
+        //
+        // buttons
+        temp.buttons = {innerHTML:'', cssText:'', completed_innerHTML: this.completed?'NOT DONE':'DONE'};
+        temp.buttons.innerHTML = `
+            <div class="node_button" data-funcall="toggle_completion">
+                ${temp.buttons.completed_innerHTML}
+            </div>
+            <div class="node_button" data-funcall="new_child">ADD</div>
+            <div class="node_button" data-funcall="">COLOR
+                <div class="submenu">
+                    ${temp.color_menu.innerHTML}
+                </div>
+            </div>
+            <div class="node_button" data-funcall="edit">EDIT</div>
+            <div class="node_button" data-funcall="remove">REMOVE</div>`;
+        if (!root.show_buttons) {
+            temp.buttons.cssText += 'display:none;';
+        }
+        //
         return temp;
     };
 
@@ -229,29 +241,19 @@ var root;
         var that = this,
             element = that.to_element(true);
         return `
-        <li style="${element.outer[1]}">
+        <li style="${element.outer.cssText}">
             <span class="${that.address.join('')} node">
-                <span class="symbol" style="${element.symbol[1]}">
-                    ${element.symbol[0]}
+                <span class="symbol" style="${element.symbol.cssText}">
+                    ${element.symbol.innerHTML}
                 </span>
-                <span class="title" style="${element.title[1]}">
-                    ${element.title[0]}
+                <span class="title" style="${element.title.cssText}">
+                    ${element.title.innerHTML}
                 </span>
-                <div class="buttons" style="${element.buttons[1]}">
-                    <div class="node_button" data-funcall="toggle_completion">
-                        ${element.buttons[0]}
-                    </div>
-                    <div class="node_button" data-funcall="new_child">ADD</div>
-                    <div class="node_button" data-funcall="">COLOR
-                        <div class="submenu">
-                            ${element.color_menu[0]}
-                        </div>
-                    </div>
-                    <div class="node_button" data-funcall="edit">EDIT</div>
-                    <div class="node_button" data-funcall="remove">REMOVE</div>
+                <div class="buttons" style="${element.buttons.cssText}">
+                    ${element.buttons.innerHTML}
                 </div>
-                <span class="children" style="${element.children[1]}">
-                    ${element.children[0]}
+                <span class="children" style="${element.children.cssText}">
+                    ${element.children.innerHTML}
                 </span>
             </span>
         </li>`;
@@ -263,16 +265,16 @@ var root;
         for (let i = 0; i < instance.length; i++) {
             var inst = instance[i],
                 element = this.to_element(refresh_children);
-            inst.parentNode.style.cssText = element.outer[1];
-            inst.children[0].style.cssText = element.symbol[1];
-            inst.children[0].innerHTML = element.symbol[0];
-            inst.children[1].style.cssText = element.title[1];
-            inst.children[1].innerHTML = element.title[0];
-            inst.children[2].style.cssText = element.buttons[1];
-            inst.children[2].children[0].innerHTML = element.buttons[0];
-            inst.children[3].style.cssText = element.children[1];
+            inst.parentNode.style.cssText = element.outer.cssText;
+            inst.children[0].style.cssText = element.symbol.cssText;
+            inst.children[0].innerHTML = element.symbol.innerHTML;
+            inst.children[1].style.cssText = element.title.cssText;
+            inst.children[1].innerHTML = element.title.innerHTML;
+            inst.children[2].style.cssText = element.buttons.cssText;
+            inst.children[2].children[0].innerHTML = element.buttons.toggle_done;
+            inst.children[3].style.cssText = element.children.cssText;
             if (refresh_children) {
-                inst.children[3].innerHTML = element.children[0];
+                inst.children[3].innerHTML = element.children.innerHTML;
                 window.root.refresh_node_listeners();
             }
         }
@@ -321,12 +323,12 @@ var root;
         contextmenu_container.innerHTML = `
         <div id="contextmenu" style="top:${y}px;left:${x}px;">
             <div class="item" data-funcall="toggle_completion">
-                ${element.buttons[0]}
+                ${element.buttons.completed_innerHTML}
             </div>
             <div class="item" data-funcall="new_child">ADD</div>
             <div class="item" data-funcall="">COLOR
                 <div class="submenu">
-                    ${element.color_menu[0]}
+                    ${element.color_menu.innerHTML}
                 </div>
             </div>
             <div class="item" data-funcall="edit">EDIT</div>
@@ -355,9 +357,9 @@ var root;
             if (depth <= 0) {
                 return;
             }
-            node.add_child(new Node('<b>' + Math.random() + '</b>'));
-            node.add_child(new Node(Math.random()));
-            node.add_child(new Node(Math.random()));
+            node.add_child(new Node(' '/*'<b>' + Math.random() + '</b>'*/));
+            node.add_child(new Node(' '/*Math.random()*/));
+            node.add_child(new Node(' '/*Math.random()*/));
             add_children(node.children[0], depth-1);
             add_children(node.children[1], depth-1);
             add_children(node.children[2], depth-1);
