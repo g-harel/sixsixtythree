@@ -1,7 +1,6 @@
 /*jshint esversion: 6 */
 
 // TODO dialogs
-// TODO listener on parent => no need to refresh using e.srcElement
 // TODO make date be taken from info
 
 var root;
@@ -31,14 +30,48 @@ var root;
         root.read_recipie();
         root.node_update();
         console.log(new Date().getTime() - start);
-        
+
     });
 
     // Root Object constructor
     function Root() {
         this.children = [];
         this.show_completed = true;
-        this.button_update();
+        // setting up all the necessary DOM elements
+        var body = document.body;
+        body.innerHTML = `
+            <div id='contextmenu_container'></div>
+            <div id='root_container'>
+                <div id='buttons'>
+                    <div class="button">NEW PARENT</div>
+                    <div class="button">TOGGLE COMPLETED</div>
+                </div>
+                <div id='tree_container'></div>
+            </div>`;
+        // adding event listeners to the permanent DOM buttons
+        body.children[1].children[0].children[0].addEventListener('click', undefined);
+        body.children[1].children[0].children[1].addEventListener('click', this.toggle_show_completed);
+        // adding an event listener for the node tree
+        let that = this;
+        body.children[1].children[1].addEventListener('click', function(e) {
+            let source = e.srcElement,
+                type = source.getAttribute('data-type'),
+                which = source.parentNode.getAttribute('data-address');
+            if (isNaN(Number(which)) || which === null) {
+                return false;
+            }
+            let node = that.access(which.split(''));
+            if (!node) {
+                return false;
+            }
+            if (type === 'symbol') {
+                node.toggle_collapse();
+            } else if (type == 'title') {
+                node.contextmenu(e.clientX, e.clientY);
+            } else {
+                return false;
+            }
+        });
     }
 
     // saves the Root to localStorage
@@ -85,34 +118,6 @@ var root;
         return temp;
     };
 
-    // updates button text and adds listeners
-    Root.prototype.button_update = function() {
-        var button_container = document.getElementById('buttons'),
-            buttons = {
-                new_parent: document.createElement('div'),
-                toggle_show_completed: document.createElement('div')
-            };
-        button_container.innerHTML = '';
-        buttons.new_parent.innerHTML = 'NEW PARENT';
-        buttons.toggle_show_completed.innerHTML = this.show_completed?'HIDE COMPLETED':'SHOW COMPLETED';
-        Object.keys(buttons).forEach(function(key) {
-            buttons[key].className = 'button';
-            button_container.appendChild(buttons[key]);
-            button_container.appendChild(buttons[key]);
-        });
-        buttons.new_parent.removeEventListener('click', undefined);
-        buttons.new_parent.addEventListener('click', undefined);
-        buttons.toggle_show_completed.removeEventListener('click', this.toggle_show_completed);
-        buttons.toggle_show_completed.addEventListener('click', this.toggle_show_completed);
-    };
-
-    // toggles the show completed variable and refreshes the dom
-    Root.prototype.toggle_show_completed = function(e) {
-        root.show_completed = root.show_completed?false:true;
-        root.button_update();
-        root.node_update();
-    };
-
     // updates the tree
     Root.prototype.node_update = function() {
         var result = '<ul>';
@@ -123,27 +128,12 @@ var root;
         }
         result += '</ul>';
         document.getElementById('tree_container').innerHTML = result;
-        this.refresh_node_listeners();
     };
 
-    // event listeners for right clicks on nodes and their collapse button
-    Root.prototype.refresh_node_listeners = function () {
-        var that = this,
-            node = document.getElementsByClassName('node');
-        for (var i = 0; i < node.length; i++) {
-            let elem = node[i];
-            elem.children[1].removeEventListener('click', item_contextmenu);
-            elem.children[1].addEventListener('click', item_contextmenu);
-            elem.children[0].removeEventListener('click', toggle);
-            elem.children[0].addEventListener('click', toggle);
-        }
-        function item_contextmenu(e) {
-            e.preventDefault();
-            that.access(e.srcElement.parentNode.className.split(' ')[0].split('')).contextmenu(e.clientX, e.clientY);
-        }
-        function toggle(e) {
-            that.access(e.srcElement.parentNode.className.split(' ')[0].split('')).toggle_collapse();
-        }
+    // toggles the show completed variable and refreshes the dom
+    Root.prototype.toggle_show_completed = function(e) {
+        root.show_completed = root.show_completed?false:true;
+        root.node_update();
     };
 
     // Node Object contructor
@@ -168,9 +158,9 @@ var root;
         return temp;
     };
 
-    // returns an array of [innerHTML, style.cssText] for each part of the element
-    Node.prototype.to_element = function(refresh) {
-        //
+    // formatted html string of the Node
+    Node.prototype.to_string = function(children) {
+        var that = this;
         // outer
         var temp = {};
         temp.outer = {innerHTML: '', cssText: ''};
@@ -180,7 +170,6 @@ var root;
         if (this.completed) {
             temp.outer.cssText += 'color:rgba(0,0,0,0.2);';
         }
-        //
         // symbol
         if (!this.children.length) {
             temp.symbol = {innerHTML:'&nbsp;', cssText:'pointer-events:none;'};
@@ -189,14 +178,12 @@ var root;
         } else {
             temp.symbol = {innerHTML:'-', cssText: ''};
         }
-        //
         // title
         temp.title = {innerHTML:`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, cssText:''};
         temp.title.cssText += `background-color:${this.color};`;
-        //
         // children
         temp.children = {innerHTML:'', cssText:''};
-        if (refresh) {
+        if (!children || children === '') {
             temp.children.innerHTML = '<ul>';
             for (let i = 0; i < this.children.length; i++) {
                 if (this.children[i]) {
@@ -204,29 +191,24 @@ var root;
                 }
             }
             temp.children.innerHTML += '</ul>';
+        } else {
+            temp.children.innerHTML = children;
         }
         if (this.collapsed) {
             temp.children.cssText += 'display:none;';
         }
         //
-        return temp;
-    };
-
-    // formatted html string of the Node
-    Node.prototype.to_string = function() {
-        var that = this,
-            element = that.to_element(true);
         return `
-        <li style="${element.outer.cssText}">
-            <span class="${that.address.join('')} node">
-                <span class="symbol" style="${element.symbol.cssText}">
-                    ${element.symbol.innerHTML}
+        <li style="${temp.outer.cssText}">
+            <span data-address="${that.address.join('')}">
+                <span class="symbol" data-type="symbol" style="${temp.symbol.cssText}">
+                    ${temp.symbol.innerHTML}
                 </span>
-                <span class="title" style="${element.title.cssText}">
-                    ${element.title.innerHTML}
+                <span class="title" data-type="title" style="${temp.title.cssText}">
+                    ${temp.title.innerHTML}
                 </span>
-                <span class="children" style="${element.children.cssText}">
-                    ${element.children.innerHTML}
+                <span class="children" style="${temp.children.cssText}">
+                    ${temp.children.innerHTML}
                 </span>
             </span>
         </li>`;
@@ -234,27 +216,23 @@ var root;
 
     // updates the DOM elements of this Node's instances and optionally the children
     Node.prototype.node_update = function(refresh_children) {
-        var instance = document.getElementsByClassName(this.address.join(''));
-        for (let i = 0; i < instance.length; i++) {
-            var inst = instance[i],
-                element = this.to_element(refresh_children);
-            inst.parentNode.style.cssText = element.outer.cssText;
-            inst.children[0].style.cssText = element.symbol.cssText;
-            inst.children[0].innerHTML = element.symbol.innerHTML;
-            inst.children[1].style.cssText = element.title.cssText;
-            inst.children[1].innerHTML = element.title.innerHTML;
-            inst.children[2].style.cssText = element.children.cssText;
-            if (refresh_children) {
-                inst.children[2].innerHTML = element.children.innerHTML;
-                window.root.refresh_node_listeners();
+        let target = document.body.children[1].children[1],
+            temp = this.address.slice(0);
+        try {
+            while (temp.length > 0) {
+                target = target.children[0].children[temp[0]].children[0].children[2];
+                temp.shift();
             }
+        } catch(e) {
+            return false;
         }
+        target = target.parentNode;
+        target.parentNode.outerHTML = this.to_string(refresh_children?false:target.children[2].innerHTML);
     };
 
     // function to draw contextmenu for this Node
     Node.prototype.contextmenu = function(x, y) {
         var contextmenu_container = document.getElementById('contextmenu_container'),
-            element = this.to_element(false),
             colors = '';
         for (let i = 1; i < this.colors.length; i++) {
             colors += `
@@ -285,7 +263,11 @@ var root;
         }
         let that = this;
         contextmenu.addEventListener('mousedown', function(e) {
-            var param = e.srcElement.getAttribute('data-funcall').split('%');
+            var param = e.srcElement.getAttribute('data-funcall');
+            if (!param) {
+                return false;
+            }
+            param = param.split('%');
             if(param[0]) {
                 that[param[0]](param[1]||false);
             }
