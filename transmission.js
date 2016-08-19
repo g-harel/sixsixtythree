@@ -9,28 +9,9 @@ var root;
 
     // document ready code
     document.addEventListener("DOMContentLoaded", function() {
-
         root = new Root();
-        function add_children(node, depth) {
-            if (depth <= 0) {
-                return;
-            }
-            node.add_child(new Node(' '/*'<b>' + Math.random() + '</b>'*/));
-            node.add_child(new Node(' '/*Math.random()*/));
-            node.add_child(new Node(' '/*Math.random()*/));
-            add_children(node.children[0], depth-1);
-            add_children(node.children[1], depth-1);
-            add_children(node.children[2], depth-1);
-        }
-        add_children(root, 3, []);
-
-        // displaying Nodes
-        var start = new Date().getTime();
-        root.save_recipe();
         root.read_recipie();
-        root.node_update();
-        console.log(new Date().getTime() - start);
-
+        root.update();
     });
 
     // Root Object constructor
@@ -38,8 +19,11 @@ var root;
         this.children = [];
         this.show_completed = true;
         // setting up all the necessary DOM elements
-        var body = document.body;
+        var body = document.body,
+            that = this;
+        // NOTE some code depends on the order/number of children, beware when editing
         body.innerHTML = `
+            <div id='prompt'></div>
             <div id='contextmenu_container'></div>
             <div id='root_container'>
                 <div id='buttons'>
@@ -49,11 +33,15 @@ var root;
                 <div id='tree_container'></div>
             </div>`;
         // adding event listeners to the permanent DOM buttons
-        body.children[1].children[0].children[0].addEventListener('click', undefined);
-        body.children[1].children[0].children[1].addEventListener('click', this.toggle_show_completed);
+        body.children[2].children[0].children[0].addEventListener('click', function() {
+            that.prompt('ENTER PARENT NODE\'S DESCRIPTION', function(description) {
+                that.add_child(new Node(description));
+                that.update();
+            });
+        });
+        body.children[2].children[0].children[1].addEventListener('mousedown', this.toggle_show_completed);
         // adding an event listener for the node tree
-        let that = this;
-        body.children[1].children[1].addEventListener('click', function(e) {
+        body.children[2].children[1].addEventListener('click', function(e) {
             let source = e.srcElement,
                 type = source.getAttribute('data-type'),
                 which = source.parentNode.getAttribute('data-address');
@@ -76,8 +64,9 @@ var root;
 
     // saves the Root to localStorage
     Root.prototype.save_recipe = function() {
+        console.log('saved');
         localStorage.root = JSON.stringify(this.children, function(key, value) {
-            if (key === 'address' || value === undefined) {
+            if (key === 'address' || value === undefined || value === null) {
                 return undefined;
             } else {
                 return value;
@@ -93,7 +82,8 @@ var root;
             nodify(this, temp[i]);
         }
         function nodify(parent, node) {
-            var temporary =  new Node(node.info, node.completed, node.due, node.color, node.collapsed),
+            if (node === null) { return; }
+            var temporary =  new Node(node.info, node.completed, node.color, node.collapsed),
                 index = parent.add_child(temporary);
             for (var i = 0; i < node.children.length; i++) {
                 nodify(parent.children[index], node.children[i]);
@@ -119,7 +109,7 @@ var root;
     };
 
     // updates the tree
-    Root.prototype.node_update = function() {
+    Root.prototype.update = function() {
         var result = '<ul>';
         for (let i = 0; i < this.children.length; i++) {
             if (this.children[i]) {
@@ -127,19 +117,47 @@ var root;
             }
         }
         result += '</ul>';
-        document.getElementById('tree_container').innerHTML = result;
+        document.body.children[2].children[1].innerHTML = result;
+        root.save_recipe();
+        root.read_recipie();
     };
 
     // toggles the show completed variable and refreshes the dom
     Root.prototype.toggle_show_completed = function(e) {
         root.show_completed = root.show_completed?false:true;
-        root.node_update();
+        root.update();
+    };
+
+    Root.prototype.prompt = function(description, callback) {
+        container = document.body.children[0];
+        container.innerHTML = `
+        <form>
+            <label> ${description} </br>
+                <input id="field" type="text"></input>
+            </label>
+        </form>`;
+        container.style.display = 'block';
+        var field = container.children[0].children[0].children[1];
+        container.children[0].addEventListener('submit', function(e) {
+            e.preventDefault();
+            container.style.display = 'none';
+            callback(field.value);
+        });
+        // workaround to prevent prompt from instantly dissapearing, I don't like it
+        setTimeout(function() {
+            window.addEventListener('mousedown', hide_prompt);
+            field.focus();
+        }, 0);
+        function hide_prompt(e) {
+            if (e.srcElement.id === 'field') { return; }
+            window.removeEventListener('mousedown', hide_prompt);
+            container.style.display = 'none';
+        }
     };
 
     // Node Object contructor
-    function Node(info, completed, due, color, collapsed) {
+    function Node(info, completed, color, collapsed) {
         this.info = info || '663663663663';
-        this.due = due || moment().format('DD/MM/YYYY');
         this.collapsed = collapsed?true:false;
         this.completed = completed?true:false;
         this.color = color || 'transparent';
@@ -179,7 +197,7 @@ var root;
             temp.symbol = {innerHTML:'-', cssText: ''};
         }
         // title
-        temp.title = {innerHTML:`${this.address.join('')} ${day_difference(this.due)}d ${esc(this.info)}`, cssText:''};
+        temp.title = {innerHTML:`${this.address.join('')} ${esc(this.info)}`, cssText:''};
         temp.title.cssText += `background-color:${this.color};`;
         // children
         temp.children = {innerHTML:'', cssText:''};
@@ -214,25 +232,31 @@ var root;
         </li>`;
     };
 
-    // updates the DOM elements of this Node's instances and optionally the children
-    Node.prototype.node_update = function(refresh_children) {
-        let target = document.body.children[1].children[1],
+    // updates the DOM elements of this Node's instance and optionally the children
+    Node.prototype.update = function(refresh_children) {
+        let target = document.body.children[2].children[1],
             temp = this.address.slice(0);
         try {
             while (temp.length > 0) {
-                target = target.children[0].children[temp[0]].children[0].children[2];
+                target = target.children[0];
+                target = target.children[temp[0]];
+                target = target.children[0];
+                target = target.children[2];
                 temp.shift();
             }
         } catch(e) {
+            console.log(e);
             return false;
         }
         target = target.parentNode;
         target.parentNode.outerHTML = this.to_string(refresh_children?false:target.children[2].innerHTML);
+        root.save_recipe();
+        root.read_recipie();
     };
 
     // function to draw contextmenu for this Node
     Node.prototype.contextmenu = function(x, y) {
-        var contextmenu_container = document.getElementById('contextmenu_container'),
+        var contextmenu_container = document.body.children[1],
             colors = '';
         for (let i = 1; i < this.colors.length; i++) {
             colors += `
@@ -277,36 +301,44 @@ var root;
     // toggle completion
     Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
-        this.node_update(false);
+        this.update(false);
     };
 
     // toggle collapsed
     Node.prototype.toggle_collapse = function() {
         this.collapsed = this.collapsed?false:true;
-        this.node_update(false);
+        this.update(false);
     };
 
     // add a child node
     Node.prototype.new_child = function() {
-        console.log('add');
+        let that = this;
+        root.prompt('ENTER CHILD NODE\'S DESCRIPTION', function(description) {
+            that.add_child(new Node(description));
+            that.update(true);
+        });
     };
 
     // set overlay color
     Node.prototype.set_color = function(color) {
         this.color = this.colors[color];
-        this.node_update(false);
+        this.update(false);
     };
 
     // edit the node
     Node.prototype.edit = function() {
-        console.log('edit');
+        let that = this;
+        root.prompt('ENTER NEW DESCRIPTION', function(description) {
+            that.info = description || 'invalid description';
+            that.update(true);
+        });
     };
 
     // delete this node
     Node.prototype.remove = function() {
         var parent = window.root.access(this.address.slice(0,-1));
         parent.children[this.address[this.address.length-1]] = undefined;
-        parent.node_update(true);
+        parent.update(false);
     };
 
     // calculates the number of days between two dates using the moment library

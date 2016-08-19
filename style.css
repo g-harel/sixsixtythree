@@ -3,6 +3,7 @@
     font-weight: bold;
     position: relative;
     font-size: 18px;
+    outline:none;
     margin: 0px;
 }
 
@@ -81,7 +82,7 @@ body {
     border: 2px solid black;
     background-color: white;
     position: absolute;
-    z-index: 999;
+    z-index: 998;
     width: 80px;
 }
 
@@ -99,11 +100,34 @@ body {
     margin-bottom: 200px;
 }
 
+#prompt {
+    padding: 4px 10px 10px 10px;
+    border-radius: 0 0 8px 8px;
+    border: 2px solid black;
+    background-color: black;
+    text-align: center;
+    border-top: 0px;
+    margin: 0 auto;
+    display: none;
+    z-index: 999;
+    color: white;
+    max-width: 700px;
+    min-width: 300px;
+    width: 60%;
+}
+
 #tree_container ul {
-    list-style: none;
     margin-left: -10px;
+    list-style: none;
 }
 
 #tree_container li {
     padding-top: 18px;
+}
+#prompt input {
+    width: calc(100% - 10px);
+    border: 2px solid white;
+    border-radius: 2px;
+    margin: 5px 0 0 0;
+    padding: 0 3px;
 }
