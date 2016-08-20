@@ -18,6 +18,10 @@ body {
     height: 100%;
 }
 
+li span {
+    white-space: nowrap;
+}
+
 .item {
     text-align: center;
     font-size: 16px;
@@ -48,6 +52,7 @@ body {
 
 .item span {
     pointer-events: none;
+    white-space: nowrap;
     font-size: 16px;
 }
 

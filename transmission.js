@@ -1,6 +1,6 @@
 /*jshint esversion: 6 */
 
-// TODO dialogs
+// TODO preserve value when edit
 // TODO make date be taken from info
 
 var root;
@@ -10,8 +10,7 @@ var root;
     // document ready code
     document.addEventListener("DOMContentLoaded", function() {
         root = new Root();
-        root.read_recipie();
-        root.update();
+        root.update(true);
     });
 
     // Root Object constructor
@@ -32,23 +31,22 @@ var root;
                 </div>
                 <div id='tree_container'></div>
             </div>`;
-        // adding event listeners to the permanent DOM buttons
+        // adding event listeners to the permanent DOM
         body.children[2].children[0].children[0].addEventListener('click', function() {
-            that.prompt('ENTER PARENT NODE\'S DESCRIPTION', function(description) {
-                that.add_child(new Node(description));
+            prompt('ENTER PARENT NODE\'S DESCRIPTION', function(description) {
+                that.children.push(new Node(description));
                 that.update();
             });
         });
         body.children[2].children[0].children[1].addEventListener('mousedown', this.toggle_show_completed);
-        // adding an event listener for the node tree
         body.children[2].children[1].addEventListener('click', function(e) {
             let source = e.srcElement,
                 type = source.getAttribute('data-type'),
                 which = source.parentNode.getAttribute('data-address');
-            if (isNaN(Number(which)) || which === null) {
+            if (!which) {
                 return false;
             }
-            let node = that.access(which.split(''));
+            let node = that.access(which.split('%'));
             if (!node) {
                 return false;
             }
@@ -74,29 +72,25 @@ var root;
         });
     };
 
-    // reads the Root from localStorage
+    // reads the Root from localStorage and parses it as Nodes
     Root.prototype.read_recipie = function() {
         this.children = [];
-        var temp = JSON.parse(localStorage.root);
+        this.address = [];
+        var temp = JSON.parse(localStorage.root) || [];
         for (var i = 0; i < temp.length; i++) {
             nodify(this, temp[i]);
         }
         function nodify(parent, node) {
             if (node === null) { return; }
             var temporary =  new Node(node.info, node.completed, node.color, node.collapsed),
-                index = parent.add_child(temporary);
+                index = parent.children.length;
+            temporary.address = parent.address.slice(0);
+            temporary.address.push(index);
+            parent.children.push(temporary);
             for (var i = 0; i < node.children.length; i++) {
                 nodify(parent.children[index], node.children[i]);
             }
         }
-    };
-
-    // adds a child to this Root
-    Root.prototype.add_child = function(node) {
-        var temp = this.children.length;
-        node.address = [temp];
-        this.children.push(node);
-        return temp;
     };
 
     // returns the node at the specified indicies in the Root's children (left to right)
@@ -109,7 +103,9 @@ var root;
     };
 
     // updates the tree
-    Root.prototype.update = function() {
+    Root.prototype.update = function(nosave) {
+        if (!nosave) { root.save_recipe(); }
+        root.read_recipie();
         var result = '<ul>';
         for (let i = 0; i < this.children.length; i++) {
             if (this.children[i]) {
@@ -118,41 +114,12 @@ var root;
         }
         result += '</ul>';
         document.body.children[2].children[1].innerHTML = result;
-        root.save_recipe();
-        root.read_recipie();
     };
 
     // toggles the show completed variable and refreshes the dom
     Root.prototype.toggle_show_completed = function(e) {
         root.show_completed = root.show_completed?false:true;
         root.update();
-    };
-
-    Root.prototype.prompt = function(description, callback) {
-        container = document.body.children[0];
-        container.innerHTML = `
-        <form>
-            <label> ${description} </br>
-                <input id="field" type="text"></input>
-            </label>
-        </form>`;
-        container.style.display = 'block';
-        var field = container.children[0].children[0].children[1];
-        container.children[0].addEventListener('submit', function(e) {
-            e.preventDefault();
-            container.style.display = 'none';
-            callback(field.value);
-        });
-        // workaround to prevent prompt from instantly dissapearing, I don't like it
-        setTimeout(function() {
-            window.addEventListener('mousedown', hide_prompt);
-            field.focus();
-        }, 0);
-        function hide_prompt(e) {
-            if (e.srcElement.id === 'field') { return; }
-            window.removeEventListener('mousedown', hide_prompt);
-            container.style.display = 'none';
-        }
     };
 
     // Node Object contructor
@@ -167,17 +134,8 @@ var root;
     // highlight colors
     Node.prototype.colors = [['NONE', 'RED', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE'], 'transparent', 'rgb(255,205,191)', 'rgb(255,250,193)', 'rgb(199,255,191)', 'rgb(191,255,235)', 'rgb(233,191,255)'];
 
-    // adds a child to this Node and give it an address
-    Node.prototype.add_child = function(node) {
-        var temp = this.children.length;
-        node.address = this.address.slice(0);
-        node.address.push(temp);
-        this.children.push(node);
-        return temp;
-    };
-
     // formatted html string of the Node
-    Node.prototype.to_string = function(children) {
+    Node.prototype.to_string = function() {
         var that = this;
         // outer
         var temp = {};
@@ -201,24 +159,20 @@ var root;
         temp.title.cssText += `background-color:${this.color};`;
         // children
         temp.children = {innerHTML:'', cssText:''};
-        if (!children || children === '') {
-            temp.children.innerHTML = '<ul>';
-            for (let i = 0; i < this.children.length; i++) {
-                if (this.children[i]) {
-                    temp.children.innerHTML += this.children[i].to_string();
-                }
+        temp.children.innerHTML = '<ul>';
+        for (let i = 0; i < this.children.length; i++) {
+            if (this.children[i]) {
+                temp.children.innerHTML += this.children[i].to_string();
             }
-            temp.children.innerHTML += '</ul>';
-        } else {
-            temp.children.innerHTML = children;
         }
+        temp.children.innerHTML += '</ul>';
         if (this.collapsed) {
             temp.children.cssText += 'display:none;';
         }
         //
         return `
         <li style="${temp.outer.cssText}">
-            <span data-address="${that.address.join('')}">
+            <span data-address="${that.address.join('%')}">
                 <span class="symbol" data-type="symbol" style="${temp.symbol.cssText}">
                     ${temp.symbol.innerHTML}
                 </span>
@@ -230,28 +184,6 @@ var root;
                 </span>
             </span>
         </li>`;
-    };
-
-    // updates the DOM elements of this Node's instance and optionally the children
-    Node.prototype.update = function(refresh_children) {
-        let target = document.body.children[2].children[1],
-            temp = this.address.slice(0);
-        try {
-            while (temp.length > 0) {
-                target = target.children[0];
-                target = target.children[temp[0]];
-                target = target.children[0];
-                target = target.children[2];
-                temp.shift();
-            }
-        } catch(e) {
-            console.log(e);
-            return false;
-        }
-        target = target.parentNode;
-        target.parentNode.outerHTML = this.to_string(refresh_children?false:target.children[2].innerHTML);
-        root.save_recipe();
-        root.read_recipie();
     };
 
     // function to draw contextmenu for this Node
@@ -301,44 +233,43 @@ var root;
     // toggle completion
     Node.prototype.toggle_completion = function() {
         this.completed = this.completed?false:true;
-        this.update(false);
+        root.update();
     };
 
     // toggle collapsed
     Node.prototype.toggle_collapse = function() {
         this.collapsed = this.collapsed?false:true;
-        this.update(false);
+        root.update();
     };
 
     // add a child node
     Node.prototype.new_child = function() {
         let that = this;
-        root.prompt('ENTER CHILD NODE\'S DESCRIPTION', function(description) {
-            that.add_child(new Node(description));
-            that.update(true);
+        prompt('ENTER CHILD NODE\'S DESCRIPTION', function(description) {
+            that.children.push(new Node(description));
+            root.update();
         });
     };
 
     // set overlay color
     Node.prototype.set_color = function(color) {
         this.color = this.colors[color];
-        this.update(false);
+        root.update();
     };
 
     // edit the node
     Node.prototype.edit = function() {
         let that = this;
-        root.prompt('ENTER NEW DESCRIPTION', function(description) {
+        prompt('ENTER NEW DESCRIPTION', function(description) {
             that.info = description || 'invalid description';
-            that.update(true);
+            root.update();
         });
     };
 
     // delete this node
     Node.prototype.remove = function() {
-        var parent = window.root.access(this.address.slice(0,-1));
-        parent.children[this.address[this.address.length-1]] = undefined;
-        parent.update(false);
+        window.root.access(this.address.slice(0,-1)).children[this.address[this.address.length-1]] = undefined;
+        root.update();
     };
 
     // calculates the number of days between two dates using the moment library
@@ -349,6 +280,34 @@ var root;
     // prevents html tags to work when user inputted data is shown
     function esc(string) {
         return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // prompts the user for input
+    function prompt(description, callback) {
+        container = document.body.children[0];
+        container.innerHTML = `
+        <form>
+            <label> ${description} </br>
+                <input id="field" type="text"></input>
+            </label>
+        </form>`;
+        container.style.display = 'block';
+        var field = container.children[0].children[0].children[1];
+        container.children[0].addEventListener('submit', function(e) {
+            e.preventDefault();
+            container.style.display = 'none';
+            callback(field.value);
+        });
+        // workaround to prevent prompt from instantly dissapearing, I don't like it
+        setTimeout(function() {
+            window.addEventListener('mousedown', hide_prompt);
+            field.focus();
+        }, 0);
+        function hide_prompt(e) {
+            if (e.srcElement.id === 'field') { return; }
+            window.removeEventListener('mousedown', hide_prompt);
+            container.style.display = 'none';
+        }
     }
 
 }());
