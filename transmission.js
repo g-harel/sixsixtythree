@@ -1,8 +1,5 @@
 /*jshint esversion: 6 */
 
-// TODO preserve value when edit
-// TODO make date be taken from info
-
 var root;
 
 (function() {
@@ -17,6 +14,7 @@ var root;
     function Root() {
         this.children = [];
         this.show_completed = true;
+        this.previous_state = '';
         // setting up all the necessary DOM elements
         var body = document.body,
             that = this;
@@ -28,19 +26,28 @@ var root;
                 <div id='buttons'>
                     <div class="button">NEW PARENT</div>
                     <div class="button">TOGGLE COMPLETED</div>
+                    <div class="button">----</div>
                 </div>
                 <div id='tree_container'></div>
             </div>`;
         // adding event listeners to the permanent DOM
         body.children[2].children[0].children[0].addEventListener('click', function() {
             prompt('ENTER PARENT NODE\'S DESCRIPTION', function(description) {
+                that.save_state();
                 that.children.push(new Node(description));
                 that.update();
             });
         });
         body.children[2].children[0].children[1].addEventListener('mousedown', this.toggle_show_completed);
+        body.children[2].children[0].children[2].addEventListener('mousedown', function() {
+            if (that.previous_state) {
+                that.read_recipie(that.previous_state);
+                that.previous_state = '';
+                that.update();
+            }
+        });
         body.children[2].children[1].addEventListener('click', function(e) {
-            let source = e.srcElement,
+            let source = e.target,
                 type = source.getAttribute('data-type'),
                 which = source.parentNode.getAttribute('data-address');
             if (!which) {
@@ -61,22 +68,26 @@ var root;
     }
 
     // saves the Root to localStorage
-    Root.prototype.save_recipe = function() {
-        console.log('saved');
-        localStorage.root = JSON.stringify(this.children, function(key, value) {
-            if (key === 'address' || value === undefined || value === null) {
+    Root.prototype.save_recipe = function(nosave) {
+        var recipie = JSON.stringify(this.children, function(key, value) {
+            if (key === 'address' || key === 'previous_state' || value === undefined || value === null) {
                 return undefined;
             } else {
                 return value;
             }
         });
+        if (!nosave) {
+            console.log('saved');
+            localStorage.root = recipie;
+        }
+        return recipie;
     };
 
     // reads the Root from localStorage and parses it as Nodes
-    Root.prototype.read_recipie = function() {
+    Root.prototype.read_recipie = function(model) {
         this.children = [];
         this.address = [];
-        var temp = JSON.parse(localStorage.root) || [];
+        var temp = (model && JSON.parse(model)) || (localStorage.root && JSON.parse(localStorage.root)) || [];
         for (var i = 0; i < temp.length; i++) {
             nodify(this, temp[i]);
         }
@@ -93,10 +104,15 @@ var root;
         }
     };
 
+    // saves current state in memory
+    Root.prototype.save_state = function() {
+        this.previous_state = this.save_recipe(true);
+    };
+
     // returns the node at the specified indicies in the Root's children (left to right)
     Root.prototype.access = function(indecies) {
         temp = this;
-        while (indecies.length !== 0 && this.children.length >= indecies[0]) {
+        while (indecies.length !== 0 && temp.children.length >= indecies[0]) {
             temp = temp.children[indecies.shift()];
         }
         return temp;
@@ -114,10 +130,12 @@ var root;
         }
         result += '</ul>';
         document.body.children[2].children[1].innerHTML = result;
+        document.body.children[2].children[0].children[2].innerHTML = this.previous_state?'UNDO':'----';
     };
 
     // toggles the show completed variable and refreshes the dom
     Root.prototype.toggle_show_completed = function(e) {
+        root.save_state();
         root.show_completed = root.show_completed?false:true;
         root.update();
     };
@@ -155,7 +173,7 @@ var root;
             temp.symbol = {innerHTML:'-', cssText: ''};
         }
         // title
-        temp.title = {innerHTML:`${this.address.join('')} ${esc(this.info)}`, cssText:''};
+        temp.title = {innerHTML:` ${esc(this.info)}`, cssText:''};
         temp.title.cssText += `background-color:${this.color};`;
         // children
         temp.children = {innerHTML:'', cssText:''};
@@ -219,7 +237,7 @@ var root;
         }
         let that = this;
         contextmenu.addEventListener('mousedown', function(e) {
-            var param = e.srcElement.getAttribute('data-funcall');
+            var param = e.target.getAttribute('data-funcall');
             if (!param) {
                 return false;
             }
@@ -232,12 +250,14 @@ var root;
 
     // toggle completion
     Node.prototype.toggle_completion = function() {
+        root.save_state();
         this.completed = this.completed?false:true;
         root.update();
     };
 
     // toggle collapsed
     Node.prototype.toggle_collapse = function() {
+        root.save_state();
         this.collapsed = this.collapsed?false:true;
         root.update();
     };
@@ -246,6 +266,7 @@ var root;
     Node.prototype.new_child = function() {
         let that = this;
         prompt('ENTER CHILD NODE\'S DESCRIPTION', function(description) {
+            root.save_state();
             that.children.push(new Node(description));
             root.update();
         });
@@ -253,6 +274,7 @@ var root;
 
     // set overlay color
     Node.prototype.set_color = function(color) {
+        root.save_state();
         this.color = this.colors[color];
         root.update();
     };
@@ -261,13 +283,15 @@ var root;
     Node.prototype.edit = function() {
         let that = this;
         prompt('ENTER NEW DESCRIPTION', function(description) {
+            root.save_state();
             that.info = description || 'invalid description';
             root.update();
         });
     };
 
-    // delete this node
+    // delete the node
     Node.prototype.remove = function() {
+        root.save_state();
         window.root.access(this.address.slice(0,-1)).children[this.address[this.address.length-1]] = undefined;
         root.update();
     };
@@ -304,7 +328,7 @@ var root;
             field.focus();
         }, 0);
         function hide_prompt(e) {
-            if (e.srcElement.id === 'field') { return; }
+            if (e.target.id === 'field') { return; }
             window.removeEventListener('mousedown', hide_prompt);
             container.style.display = 'none';
         }
