@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="https://i.gyazo.com/f335c963f08725ad7bd29450df4bc94d.png" width="400"/>
+  <img src="https://i.gyazo.com/f335c963f08725ad7bd29450df4bc94d.png" width="200"/>
 </p>
 
 Live version [here](https://g-harel.github.io/663/)
