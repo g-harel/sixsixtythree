@@ -296,11 +296,6 @@ var root;
         root.update();
     };
 
-    // calculates the number of days between two dates using the moment library
-    function day_difference(date) {
-        return moment(date, 'DD/MM/YYYY').startOf('day').diff(moment().startOf('day'), 'days');
-    }
-
     // prevents html tags to work when user inputted data is shown
     function esc(string) {
         return String(string).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
