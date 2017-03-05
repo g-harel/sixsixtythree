@@ -5,7 +5,7 @@
   "repository": "https://github.com/g-harel/ECMS.git",
   "license": "MIT",
   "dependencies": {
-    "goo-js": "1.0.5"
+    "goo-js": "^1.2.0"
   },
   "devDependencies": {
     "babel-core": "^6.22.1",
