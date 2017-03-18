@@ -1,17 +1,50 @@
 const goo = require('goo-js');
 
+const dialogBuilder = require('./builders/dialog.js');
+const menuBuilder = require('./builders/menu.js');
+const nodeBuilder = require('./builders/node.js');
+
 const localStorageKey = 'data-663';
 
-const colors = [['NONE', 'RED', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE'], 'transparent', 'rgb(255,205,191)', 'rgb(255,250,193)', 'rgb(199,255,191)', 'rgb(191,255,235)', 'rgb(233,191,255)'];
+const colors = [
+    {
+        name: 'NONE',
+        color: 'transparent',
+    }, {
+        name: 'RED',
+        color: 'rgb(255,205,191)',
+    }, {
+        name: 'YELLOW',
+        color: 'rgb(255,250,193)',
+    }, {
+        name: 'GREEN',
+        color: 'rgb(199,255,191)',
+    }, {
+        name: 'BLUE',
+        color: 'rgb(191,255,235)',
+    }, {
+        name: 'PURPLE',
+        color: 'rgb(233,191,255)',
+    },
+];
 
 let state = {
     showCompleted: true,
+    contextMenuAddress: undefined,
     dialog: {
         hidden: true,
         description: 'test',
         action: null,
     },
-    nodes: [],
+    nodes: [
+        {
+            completed: false,
+            collapsed: false,
+            color: 'transparent',
+            info: 'test',
+            children: [],
+        },
+    ],
 };
 
 let actions = {
@@ -28,74 +61,19 @@ let actions = {
     },
 };
 
-let builder = (state) => {
-    return {
-        tagName: 'div',
-        children: [
-            dialogBuilder(state),
-            buttonsBuilder(state),
-            treeBuilder(state),
-        ],
-    };
-};
-
-let dialogBuilder = (state) => {
-    return [
-        'div',, {display: state.dialog.hidden?'none':'block'}, [[
-            'form', {
-                onsubmit: (e) => {
-                    e.preventDefault();
-                    app.act('ADD', {
-                        description: e.srcElement[0].value,
-                        address: [],
-                    });
-                    e.srcElement[0].value = '';
-                },
-            },, [[
-                'label',,, [
-                    (state.dialog.description || '-'),
-                    ['br'],
-                    ['input.field', {type: 'text'}],
-                ],
-            ]],
+let builder = (state) => [
+    'div',,, [
+        dialogBuilder(app, state),
+        menuBuilder(app, state),
+        ['div#tree_container',,, [
+            ['ul',,,
+                state.nodes.map((parentNode) => {
+                    return nodeBuilder(state, parentNode, colors);
+                }),
+            ],
         ]],
-    ];
-};
-
-let buttonsBuilder = (state) => {
-    return [
-        'div.buttons',,, [
-            ['div.button', {
-                onclick: () => {
-                    app.act('PROMPT', {});
-                    setTimeout(() => {
-                        document.querySelector('.field').focus();
-                    }, 0);
-                },
-            },, ['NEW PARENT']],
-            ['div.button', {},, ['TOGGLE COMPLETED']],
-            ['div.button', {},, ['UNDO']],
-        ],
-    ];
-};
-
-let treeBuilder = (state) => {
-    return [
-        'div',,,
-        state.nodes.map((n) => {
-            return n + '--';
-        }),
-    ];
-};
-
-let contextmenuBuilder = (state) => {
-    return {
-        tagName: 'div',
-        children: [{
-            tagName: 'div',
-        }],
-    };
-};
+    ],
+];
 
 let watcher = (state) => {
     console.log(JSON.stringify(state));
