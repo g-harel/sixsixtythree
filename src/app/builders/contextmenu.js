@@ -9,12 +9,14 @@ module.exports = (item, colors) => [
         ['div.item',,, [
             'COLOR',
             ['div.submenu',,,
-                colors.map((color) => [
-                    ['div.item', {onclick: `(CHANGE_COLOR,${color.color}!${item.address})`},, [
-                        ['span',, {backgroundColor: color.color}],
-                        color.name,
-                    ]],
-                ]),
+                colors.map((color) => {
+                    return [
+                        'div.item', {onclick: `(CHANGE_COLOR,${color.color}!${item.address})`},, [
+                            ['span',, {backgroundColor: color.color}],
+                            color.name,
+                        ],
+                    ];
+                }),
             ],
         ]],
         ['div.item', {onclick: `(EDIT_DESCRIPTION,${item.address})`},, [
