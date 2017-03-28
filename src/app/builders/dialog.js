@@ -1,6 +1,7 @@
-module.exports = (app, state) => [
-    'div',, {display: state.dialog.hidden?'none':'block'}, [
+module.exports = (app, state) => (
+    ['div',, {display: state.dialog.hidden?'none':'block'}, [
         ['form', {
+            // transfer event to action
             onsubmit: (e) => {
                 e.preventDefault();
                 app.act('ADD', {
@@ -16,5 +17,5 @@ module.exports = (app, state) => [
                 ['input.field', {type: 'text'}],
             ]],
         ]],
-    ],
-];
+    ]]
+);

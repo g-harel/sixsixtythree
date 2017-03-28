@@ -1,5 +1,7 @@
-module.exports = (item, colors) => [
-    'div#contextmenu',,, [
+module.exports = (item, colors, show) => (
+    ['div.contextmenu', {onmouseout2: '(TOGGLE_CONTEXTMENU,null)'}, {
+        display: show?'block':'none',
+    }, [
         ['div.item', {onclick: `(TOGGLE_COMPLETED,${item.address})`},, [
             item.completed?'NOT DONE':'DONE',
         ]],
@@ -9,14 +11,13 @@ module.exports = (item, colors) => [
         ['div.item',,, [
             'COLOR',
             ['div.submenu',,,
-                colors.map((color) => {
-                    return [
-                        'div.item', {onclick: `(CHANGE_COLOR,${color.color}!${item.address})`},, [
-                            ['span',, {backgroundColor: color.color}],
+                colors.map((color) => (
+                    ['div.item', {onclick: `(CHANGE_COLOR,${color.color}!${item.address})`},, [
+                        ['span',, {backgroundColor: color.color}, [
                             color.name,
-                        ],
-                    ];
-                }),
+                        ]],
+                    ]]
+                )),
             ],
         ]],
         ['div.item', {onclick: `(EDIT_DESCRIPTION,${item.address})`},, [
@@ -25,5 +26,5 @@ module.exports = (item, colors) => [
         ['div.item', {onclick: `(REMOVE,${item.address})`},, [
             'REMOVE',
         ]],
-    ],
-];
+    ]]
+);

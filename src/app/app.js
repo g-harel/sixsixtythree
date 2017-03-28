@@ -12,25 +12,25 @@ const colors = [
         color: 'transparent',
     }, {
         name: 'RED',
-        color: 'rgb(255,205,191)',
+        color: '#ffcdbf',
     }, {
         name: 'YELLOW',
-        color: 'rgb(255,250,193)',
+        color: '#fffac1',
     }, {
         name: 'GREEN',
-        color: 'rgb(199,255,191)',
+        color: '#c7ffbf',
     }, {
         name: 'BLUE',
-        color: 'rgb(191,255,235)',
+        color: '#bfffeb',
     }, {
         name: 'PURPLE',
-        color: 'rgb(233,191,255)',
+        color: '#e9bfff',
     },
 ];
 
-let state = {
+const state = {
     showCompleted: true,
-    contextMenuAddress: undefined,
+    contextMenuAddress: null,
     dialog: {
         hidden: true,
         description: 'test',
@@ -41,28 +41,101 @@ let state = {
             completed: false,
             collapsed: false,
             color: 'transparent',
-            info: 'test',
-            children: [],
+            info: 'test0',
+            address: '0',
+            children: [{
+                completed: false,
+                collapsed: false,
+                color: 'transparent',
+                info: 'test00',
+                address: '0#0',
+                children: [],
+            }, {
+                completed: false,
+                collapsed: false,
+                color: 'transparent',
+                info: 'test01',
+                address: '0#1',
+                children: [],
+            }],
         },
     ],
 };
 
-let actions = {
-    PROMPT: (state, params) => {
-        state.dialog.hidden = false;
-        state.dialog.description = params.description;
-        state.dialog.action = params.action;
+const navigate = (object, address, callback) => {
+    if (address.length === 0 || object === undefined) {
+        callback(object);
+    } else {
+        let nextKey = address.shift();
+        if (nextKey !== 'children' && address.length > 0) {
+            address.unshift('children');
+        }
+        navigate(object[nextKey], address, callback);
+    }
+};
+
+const actions = {
+    TOGGLE_DISPLAY_COMPLETED: (state) => {
+        state.showCompleted = !state.showCompleted;
         return state;
     },
-    ADD: (state, params) => {
-        state.nodes.push(params.description);
-        state.dialog.hidden = true;
+    TOGGLE_COMPLETED: (state, address) => {
+        navigate(state.nodes, address.split('#'), (node) => {
+            node.completed = !node.completed;
+        });
+        return state;
+    },
+    TOGGLE_COLLAPSED: (state, address) => {
+        navigate(state.nodes, address.split('#'), (node) => {
+            node.collapsed = !node.collapsed;
+        });
+        return state;
+    },
+    TOGGLE_CONTEXTMENU: (state, address) => {
+        if (state.contextMenuAddress === address) {
+            state.contextMenuAddress = null;
+        } else {
+            state.contextMenuAddress = address;
+        }
+        return state;
+    },
+    ADD_CHILD: (state, address) => {
+        navigate(state.nodes, address.split('#'), (node) => {
+            node.children.push({
+                completed: false,
+                collapsed: false,
+                color: 'transparent',
+                info: 'test0',
+                address: address + '#' + node.children.length,
+                children: [],
+            });
+        });
+        return state;
+    },
+    CHANGE_COLOR: (state, colorAndAdress) => {
+        colorAndAdress = colorAndAdress.split('!');
+        let color = colorAndAdress[0];
+        let address = colorAndAdress[1];
+        navigate(state.nodes, address.split('#'), (node) => {
+            node.color = color;
+        });
+        return state;
+    },
+    EDIT_DESCRIPTION: (state, address) => {
+
+    },
+    REMOVE: (state, address) => {
+        address = address.split('#');
+        let lastIndex = address.pop();
+        navigate(state.nodes, address, (node) => {
+            delete node[lastIndex];
+        });
         return state;
     },
 };
 
-let builder = (state) => [
-    'div',,, [
+const builder = (state) => (
+    ['div',,, [
         dialogBuilder(app, state),
         menuBuilder(app, state),
         ['div#tree_container',,, [
@@ -72,15 +145,15 @@ let builder = (state) => [
                 }),
             ],
         ]],
-    ],
-];
+    ]]
+);
 
-let watcher = (state) => {
-    console.log(JSON.stringify(state));
+const watcher = (state) => {
+    console.log(JSON.parse(JSON.stringify(state)));
     localStorage.setItem(localStorageKey, JSON.stringify(state));
 };
 
-let app = goo({
+const app = goo({
     target: document.body,
     builder: builder,
 }, {
