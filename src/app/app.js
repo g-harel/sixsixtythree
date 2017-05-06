@@ -1,41 +1,27 @@
-const goo = require('goo-js');
-
 const dialogBuilder = require('./builders/dialog.js');
 const menuBuilder = require('./builders/menu.js');
 const nodeBuilder = require('./builders/node.js');
 
+let app = window.goo(document.body);
+
 const localStorageKey = 'data-663';
 
-const colors = [
-    {
-        name: 'NONE',
-        color: 'transparent',
-    }, {
-        name: 'RED',
-        color: '#ffcdbf',
-    }, {
-        name: 'YELLOW',
-        color: '#fffac1',
-    }, {
-        name: 'GREEN',
-        color: '#c7ffbf',
-    }, {
-        name: 'BLUE',
-        color: '#bfffeb',
-    }, {
-        name: 'PURPLE',
-        color: '#e9bfff',
-    },
-];
-
-const state = {
+app.setState({
     showCompleted: true,
     contextMenuAddress: null,
     dialog: {
         hidden: true,
-        description: 'test',
+        description: '',
         action: null,
     },
+    colors: [
+        {name: 'NONE', color: 'transparent'},
+        {name: 'RED', color: '#ffcdbf'},
+        {name: 'YELLOW', color: '#fffac1'},
+        {name: 'GREEN', color: '#c7ffbf'},
+        {name: 'BLUE', color: '#bfffeb'},
+        {name: 'PURPLE', color: '#e9bfff'},
+    ],
     nodes: [
         {
             completed: false,
@@ -60,7 +46,16 @@ const state = {
             }],
         },
     ],
-};
+});
+
+const createNode = (description, address) => ({
+    completed: false,
+    collapsed: false,
+    color: 'transparent',
+    info: description,
+    address: String(address),
+    children: [],
+});
 
 const navigate = (object, address, callback) => {
     if (address.length === 0 || object === undefined) {
@@ -74,90 +69,54 @@ const navigate = (object, address, callback) => {
     }
 };
 
-const actions = {
-    TOGGLE_DISPLAY_COMPLETED: (state) => {
-        state.showCompleted = !state.showCompleted;
-        return state;
+app.use({action: [
+    {
+        type: 'TOGGLE_SHOW_COMPLETED',
+        target: ['showCompleted'],
+        handler: (status) => !status,
     },
-    TOGGLE_COMPLETED: (state, address) => {
-        navigate(state.nodes, address.split('#'), (node) => {
-            node.completed = !node.completed;
-        });
-        return state;
+    {
+        type: 'SHOW_DIALOG',
+        target: ['dialog'],
+        handler: (dialog, [action, description]) => {
+            dialog.hidden = false;
+            dialog.action = (value) => app.a(action, value);
+            dialog.description = description;
+            return dialog;
+        },
     },
-    TOGGLE_COLLAPSED: (state, address) => {
-        navigate(state.nodes, address.split('#'), (node) => {
-            node.collapsed = !node.collapsed;
-        });
-        return state;
+    {
+        type: 'HIDE_DIALOG',
+        target: ['dialog'],
+        handler: (dialog) => ({
+            hidden: true,
+            action: null,
+            description: '',
+        }),
     },
-    TOGGLE_CONTEXTMENU: (state, address) => {
-        if (state.contextMenuAddress === address) {
-            state.contextMenuAddress = null;
-        } else {
-            state.contextMenuAddress = address;
-        }
-        return state;
+    {
+        type: 'NEW_PARENT',
+        target: ['nodes'],
+        handler: (nodes, description) => {
+            nodes.push(createNode(description, nodes.length));
+            return nodes;
+        },
     },
-    ADD_CHILD: (state, address) => {
-        navigate(state.nodes, address.split('#'), (node) => {
-            node.children.push({
-                completed: false,
-                collapsed: false,
-                color: 'transparent',
-                info: 'test0',
-                address: address + '#' + node.children.length,
-                children: [],
-            });
-        });
-        return state;
-    },
-    CHANGE_COLOR: (state, colorAndAdress) => {
-        colorAndAdress = colorAndAdress.split('!');
-        let color = colorAndAdress[0];
-        let address = colorAndAdress[1];
-        navigate(state.nodes, address.split('#'), (node) => {
-            node.color = color;
-        });
-        return state;
-    },
-    EDIT_DESCRIPTION: (state, address) => {
+]});
 
-    },
-    REMOVE: (state, address) => {
-        address = address.split('#');
-        let lastIndex = address.pop();
-        navigate(state.nodes, address, (node) => {
-            delete node[lastIndex];
-        });
-        return state;
-    },
-};
-
-const builder = (state) => (
-    ['div',,, [
+app((state) => (
+    ['div', {}, [
         dialogBuilder(app, state),
         menuBuilder(app, state),
-        ['div#tree_container',,, [
-            ['ul',,,
-                state.nodes.map((parentNode) => {
-                    return nodeBuilder(state, parentNode, colors);
-                }),
+        ['div#tree_container', {}, [
+            ['ul', {},
+                state.nodes.map((parentNode) => nodeBuilder(app, state, parentNode)),
             ],
         ]],
     ]]
-);
+));
 
-const watcher = (state) => {
+app.use({watcher: (state) => {
     console.log(JSON.parse(JSON.stringify(state)));
     localStorage.setItem(localStorageKey, JSON.stringify(state));
-};
-
-const app = goo({
-    target: document.body,
-    builder: builder,
-}, {
-    state: state,
-    actions: actions,
-    watchers: watcher,
-});
+}});

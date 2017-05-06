@@ -1,21 +1,19 @@
 module.exports = (app, state) => (
-    ['div.buttons',,, [
+    ['div.buttons', {}, [
         // new parent
-        ['div.button', {
-            onclick: '(ADD_PARENT, [])',
-        },, [
+        ['div.button', {onclick: () => app.a('SHOW_DIALOG', ['NEW_PARENT', 'Add a parent task'])}, [
             'NEW PARENT',
         ]],
         // toggle completed
-        ['div.button', {onclick: '(TOGGLE_DISPLAY_COMPLETED, 0)'},, [
+        ['div.button', {onclick: () => app.a('TOGGLE_SHOW_COMPLETED')}, [
             state.showCompleted?'HIDE COMPLETED':'SHOW COMPLETED',
         ]],
         // undo
-        ['div.button', {onclick: '(UNDO, 0)'},, [
+        ['div.button', {onclick: () => app.undo()}, [
             'UNDO',
         ]],
         // redo
-        ['div.button', {onclick: '(REDO, 0)'},, [
+        ['div.button', {onclick: () => app.redo()}, [
             'REDO',
         ]],
     ]]
