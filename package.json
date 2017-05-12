@@ -10,7 +10,7 @@
     "open": "start ./src/public/index.html"
   },
   "dependencies": {
-    "goo-js": "^1.3.0"
+    "goo-js": "^2.0.0"
   },
   "devDependencies": {
     "babel-core": "^6.22.1",

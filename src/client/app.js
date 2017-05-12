@@ -1,49 +1,42 @@
-const dialog = require('./builders/dialog.js');
-const menu = require('./builders/menu.js');
-const node = require('./builders/node.js');
+const goo = require('goo-js');
 
-let app = window.goo(document.body);
-
-const dialogBuilder = dialog(app);
-const menuBuilder = menu(app);
-const nodeBuilder = node(app);
+const Dialog = require('./components/dialog');
+const Menu = require('./components/menu');
+const Task = require('./components/task');
+const ContextMenu = require('./components/context-menu');
 
 const localStorageKey = 'data-663';
 
-// first time user's state
-const defaultState = {
-    showCompleted: true,
-    contextMenuAddress: null,
-    dialog: {
-        hidden: true,
-        description: '',
-        action: null,
-        value: '',
-    },
-    colors: [
-        {name: 'NONE', color: 'transparent'},
-        {name: 'RED', color: '#ffcdbf'},
-        {name: 'YELLOW', color: '#fffac1'},
-        {name: 'GREEN', color: '#c7ffbf'},
-        {name: 'BLUE', color: '#bfffeb'},
-        {name: 'PURPLE', color: '#e9bfff'},
-    ],
-    nodes: [],
+const app = goo(document.body);
+
+app.use({base: '/C:/Users/Gabriel/Documents/dev/663/src/public/index.html'});
+
+let contextMenuAddress = [];
+let dialog = {
+    hidden: true,
+    hint: '',
+    action: null,
+    value: '',
 };
 
-// fetching state
+const defaultState = {
+    showCompleted: true,
+    tasks: [],
+};
+
 app.setState(JSON.parse(localStorage.getItem(localStorageKey)) || defaultState);
 
-// making some "globally" available functions
-app._.createNode = (description, address) => ({
-    completed: false,
-    collapsed: false,
-    color: 'transparent',
-    info: description,
-    address: String(address),
-    children: [],
-});
-app._.navigate = (object, address, callback) => {
+app.use({watcher: (state, type) => {
+    localStorage.setItem(localStorageKey, JSON.stringify(state));
+}});
+
+app.use({action: {
+    type: 'TOGGLE_SHOW_COMPLETED',
+    target: ['showCompleted'],
+    handler: (value) => !value,
+}});
+
+const navigate = (object, address, callback) => {
     if (address.length === 0 || object === undefined) {
         callback(object);
     } else {
@@ -51,56 +44,199 @@ app._.navigate = (object, address, callback) => {
         if (nextKey !== 'children' && address.length > 0) {
             address.unshift('children');
         }
-        app._.navigate(object[nextKey], address, callback);
+        navigate(object[nextKey], address, callback);
     }
 };
 
-// defining layout
+const createTask = (description, address) => ({
+    completed: false,
+    collapsed: false,
+    color: 'transparent',
+    description: description,
+    address: address,
+    children: [],
+});
+
+app.use({action: {
+    type: 'ADD',
+    target: ['tasks'],
+    handler: (tasks, {address, description}) => {
+        let addr = address.slice();
+        navigate(tasks, address.slice(), (task) => {
+            if (!Array.isArray(task)) {
+                task = task.children;
+            }
+            addr.push(task.length);
+            task.push(createTask(description, addr));
+        });
+        return tasks;
+    },
+}});
+
+app.use({action: {
+    type: 'EDIT',
+    target: ['tasks'],
+    handler: (tasks, {address, key, value}) => {
+        navigate(tasks, address, (task) => {
+            task[key] = value;
+        });
+        return tasks;
+    },
+}});
+
+app.use({action: {
+    type: 'REMOVE',
+    target: ['tasks'],
+    handler: (tasks, {address}) => {
+        let addr = address.slice();
+        let index = addr.pop();
+        navigate(tasks, addr, (task) => {
+            if (!Array.isArray(task)) {
+                task = task.children;
+            }
+            delete task[index];
+        });
+        return tasks;
+    },
+}});
+
+const undo = () => {
+    contextMenuAddress = [];
+    app.undo();
+};
+
+const redo = () => {
+    contextMenuAddress = [];
+    app.redo();
+};
+
+const hideDialog = () => {
+    dialog = {
+        hidden: true,
+        hint: '',
+        action: null,
+        value: '',
+    };
+    app.update();
+};
+
+const showDialog = (hint, value = '', action) => {
+    dialog = {
+        hidden: false,
+        hint: hint,
+        value: value,
+        action: (e) => {
+            e.preventDefault();
+            action(e.target[0].value);
+            hideDialog();
+        },
+    };
+    contextMenuAddress = [];
+    app.update();
+};
+
+const addTask = (address) => {
+    showDialog('Add a task', '', (description) => {
+        app.act('ADD', {description, address});
+    });
+};
+
+const toggleShowCompleted = () => {
+    app.act('TOGGLE_SHOW_COMPLETED');
+};
+
+const toggleCollapsed = (address) => () => {
+    navigate(app.getState().tasks, address.slice(), (task) => {
+        app.act('EDIT', {
+            address: address,
+            key: 'collapsed',
+            value: !task.collapsed,
+        });
+    });
+};
+
+const toggleContextMenu = (address) => () => {
+    if (contextMenuAddress.toString() === address.toString()) {
+        contextMenuAddress = [];
+    } else {
+        contextMenuAddress = address.slice();
+    }
+    app.update();
+};
+
+const toggleComplete = (address) => () => {
+    navigate(app.getState().tasks, address.slice(), (task) => {
+        app.act('EDIT', {
+            address: address,
+            key: 'completed',
+            value: !task.completed,
+        });
+    });
+};
+
+const addChild = (address) => () => {
+    showDialog('Add a child task', '', (description) => {
+        app.act('ADD', {description, address});
+    });
+};
+
+const changeColor = (address) => (color) => {
+    app.act('EDIT', {
+        address: address,
+        key: 'color',
+        value: color,
+    });
+};
+
+const editTask = (address) => () => {
+    navigate(app.getState().tasks, address.slice(), (task) => {
+        showDialog('Edit task', task.description, (description) => {
+            app.act('EDIT', {
+                address: address,
+                key: 'description',
+                value: description,
+            });
+        });
+    });
+};
+
+const remove = (address) => () => {
+    app.act('REMOVE', {address});
+};
+
+const createContextMenu = (address, isCompleted) => (
+    [ContextMenu,
+        isCompleted,
+        toggleContextMenu(address),
+        toggleComplete(address),
+        addChild(address),
+        changeColor(address),
+        editTask(address),
+        remove(address),
+    ]
+);
+
 app((state) => (
     ['div', {}, [
-        dialogBuilder(app, state),
-        menuBuilder(app, state),
-        ['div#tree_container', {}, [
+        (dialog.hidden
+            ? null
+            : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog]),
+        [Menu, state.showCompleted, () => addTask([]), toggleShowCompleted, undo, redo],
+        ['div.tree-container', {}, [
             ['ul', {},
-                state.nodes.map((parentNode) => nodeBuilder(app, state, parentNode)),
+                state.tasks.map((parentTask) => (
+                    [Task,
+                        parentTask,
+                        state.showCompleted,
+                        toggleCollapsed,
+                        toggleContextMenu,
+                        contextMenuAddress,
+                        createContextMenu,
+                    ]
+                )),
             ],
         ]],
     ]]
 ));
 
-// make sure the menus are hidden when undo/redo actions happen
-app.use({action: [
-    {
-        type: 'UNDO',
-        target: [],
-        handler: (state) => {
-            state.contextMenuAddress = null;
-            state.dialog = {
-                hidden: true,
-                description: '',
-                action: null,
-                value: '',
-            };
-            return state;
-        },
-    },
-    {
-        type: 'REDO',
-        target: [],
-        handler: (state) => {
-            state.contextMenuAddress = null;
-            state.dialog = {
-                hidden: true,
-                description: '',
-                action: null,
-                value: '',
-            };
-            return state;
-        },
-    },
-]});
-
-// save state after each change
-app.use({watcher: (state, type) => {
-    localStorage.setItem(localStorageKey, JSON.stringify(state));
-}});
+window.app = app;

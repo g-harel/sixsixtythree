@@ -22,22 +22,6 @@ li span {
     white-space: nowrap;
 }
 
-.item {
-    text-align: center;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 3px;
-    height: 20px;
-}
-
-.submenu {
-    display: none;
-    padding: 0px;
-    widows: 200px;
-    left: 80px;
-    top: -2px;
-}
-
 .button {
     box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
     margin: 24px -16px 0px 26px;
@@ -51,16 +35,6 @@ li span {
     width: auto;
 }
 
-.symbol {
-    user-select: none;
-}
-
-.item span {
-    pointer-events: none;
-    white-space: nowrap;
-    font-size: 16px;
-}
-
 .button:hover {
     background-color: #eee;
 }
@@ -71,8 +45,53 @@ li span {
     top: 2px;
 }
 
+.context-menu {
+    color: #000;
+    position: relative;
+    left: 0px;
+}
+
+.context-menu, .submenu {
+    box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
+    border: 2px solid black;
+    background-color: white;
+    position: absolute;
+    z-index: 998;
+    width: 80px;
+}
+
+.item {
+    text-align: center;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 3px;
+    height: 20px;
+}
+
+.item span {
+    pointer-events: none;
+    white-space: nowrap;
+    font-size: 16px;
+}
+
 .item:hover {
     background-color: #eee;
+}
+
+.item:hover > .submenu {
+    display: block;
+}
+
+.submenu {
+    display: none;
+    padding: 0px;
+    widows: 200px;
+    left: 80px;
+    top: -2px;
+}
+
+.symbol {
+    user-select: none;
 }
 
 .symbol:hover {
@@ -83,35 +102,19 @@ li span {
     cursor: default;
 }
 
-.item:hover > .submenu {
-    display: block;
+.tree-container {
+    margin: 20px 0 200px 10px;
 }
 
-.contextmenu {
-    color: #000;
+.tree-container ul ul {
+    border-left: 1px solid #f3f3f3;
+    margin-left: 4px;
+    list-style: none;
 }
 
-.contextmenu, .submenu {
-    box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
-    border: 2px solid black;
-    background-color: white;
-    position: absolute;
-    z-index: 998;
-    width: 80px;
-}
-
-#root_container {
-    padding-bottom: 20px;
-    position: absolute;
-    overflow-y: scroll;
-    height: 100%;
-    width: 100%;
-    left: 0px;
-    top: 0px;
-}
-
-#tree_container {
-    margin-bottom: 200px;
+.tree-container li {
+    box-sizing: border-box;
+    padding-top: 18px;
 }
 
 .dialog-wrapper {
@@ -140,16 +143,6 @@ li span {
     width: 100vw;
     left: 0;
     z-index: -1;
-}
-
-#tree_container ul {
-    margin-left: -10px;
-    list-style: none;
-}
-
-#tree_container li {
-    box-sizing: border-box;
-    padding-top: 18px;
 }
 
 .dialog input {
