@@ -5,9 +5,7 @@
   "repository": "https://github.com/g-harel/ECMS.git",
   "license": "MIT",
   "scripts": {
-    "start": "yarn open | yarn build",
-    "build": "webpack --watch",
-    "open": "start ./src/public/index.html"
+    "start": "webpack-dev-server --content-base src/public --inline --open"
   },
   "dependencies": {
     "goo-js": "^2.0.0"
@@ -19,6 +17,7 @@
     "eslint": "^3.15.0",
     "eslint-config-google": "^0.7.1",
     "raw-loader": "^0.5.1",
-    "webpack": "^2.2.1"
+    "webpack": "^2.2.1",
+    "webpack-dev-server": "^2.4.5"
   }
 }

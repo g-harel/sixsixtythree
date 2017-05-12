@@ -9,7 +9,7 @@ const localStorageKey = 'data-663';
 
 const app = goo(document.body);
 
-app.use({base: '/C:/Users/Gabriel/Documents/dev/663/src/public/index.html'});
+app.use({base: '/'});
 
 let contextMenuAddress = [];
 let dialog = {
