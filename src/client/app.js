@@ -5,11 +5,11 @@ const Menu = require('./components/menu');
 const Task = require('./components/task');
 const ContextMenu = require('./components/context-menu');
 
-const localStorageKey = 'data-663';
+const socketConnection = require('./connection');
 
 const app = goo(document.body);
 
-app.use({base: '/'});
+app.use(socketConnection(app));
 
 let contextMenuAddress = [];
 let dialog = {
@@ -18,17 +18,6 @@ let dialog = {
     action: null,
     value: '',
 };
-
-const defaultState = {
-    showCompleted: true,
-    tasks: [],
-};
-
-app.setState(JSON.parse(localStorage.getItem(localStorageKey)) || defaultState);
-
-app.use({watcher: (state, type) => {
-    localStorage.setItem(localStorageKey, JSON.stringify(state));
-}});
 
 app.use({action: {
     type: 'TOGGLE_SHOW_COMPLETED',
@@ -216,7 +205,7 @@ const createContextMenu = (address, isCompleted) => (
     ]
 );
 
-app((state) => (
+app('/!/:roomId/', (state) => (
     ['div', {}, [
         (dialog.hidden
             ? null

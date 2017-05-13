@@ -8,7 +8,11 @@
     "start": "webpack-dev-server --content-base src/public --inline --open"
   },
   "dependencies": {
-    "goo-js": "^2.0.0"
+    "body-parser": "^1.17.1",
+    "express": "^4.15.2",
+    "goo-js": "^2.0.0",
+    "mongodb": "^2.2.26",
+    "socket.io": "^2.0.1"
   },
   "devDependencies": {
     "babel-core": "^6.22.1",
