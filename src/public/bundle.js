@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 6);
+/******/ 	return __webpack_require__(__webpack_require__.s = 11);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -209,10 +209,10 @@ module.exports = utils;
 "use strict";
 
 
-var dom = __webpack_require__(2);
-var state = __webpack_require__(5);
-var router = __webpack_require__(4);
-var history = __webpack_require__(3)();
+var dom = __webpack_require__(7);
+var state = __webpack_require__(10);
+var router = __webpack_require__(9);
+var history = __webpack_require__(8)();
 
 var _require = __webpack_require__(0)(),
     isFunction = _require.isFunction,
@@ -341,6 +341,123 @@ if (!!window) {
 "use strict";
 
 
+var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
+
+var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
+    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
+        return ['div.item', { onclick: function onclick() {
+                return changeColor(color.color);
+            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
+    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
+};
+
+module.exports = contextMenu;
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var dialog = function dialog(hint, defaultValue, submit, hideDialog) {
+    setTimeout(function () {
+        return document.querySelector('.field').focus();
+    }, 0);
+    return [function () {
+        return ['div.dialog-wrapper', {}, [['div.dialog', {}, [['form', { onsubmit: submit }, [['label', {}, [hint || '', ['br'], ['input.field', { type: 'text', value: defaultValue }]]]]]]], ['div.dialog-overlay', { onclick: hideDialog }]]];
+    }];
+};
+
+module.exports = dialog;
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var menu = function menu(showCompleted, addParent, toggleShowCompleted, undo, redo) {
+    return ['div.buttons', {}, [['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
+};
+
+module.exports = menu;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
+    var completed = _ref.completed,
+        collapsed = _ref.collapsed,
+        color = _ref.color,
+        description = _ref.description,
+        address = _ref.address,
+        children = _ref.children;
+
+    var isDisplayed = completed && !showCompleted;
+    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
+    var hasChildren = !!children.length;
+    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
+    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
+    return [function () {
+        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
+            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
+            onclick: toggleCollapsed(address)
+        }, [symbol]], ['span.title | background-color:' + color + ';', {
+            onclick: toggleContextMenu(address),
+            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
+        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
+            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
+        })]]]]]]];
+    }];
+};
+
+module.exports = Task;
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var socket = window.io.connect(window.location.origin);
+
+module.exports = function (app) {
+    socket.on('connect', function () {
+        socket.emit('join', (window.location.pathname + 'acdefghijklmnopq').substr(3, 16));
+    });
+
+    socket.on('update', function (state) {
+        app.setState(state);
+    });
+
+    socket.on('error', function (err) {
+        console.err(err);
+    });
+
+    return {
+        name: 'socket connection',
+        watcher: function watcher(state, type) {
+            if (type !== '__OVERRIDE__') {
+                socket.emit('update', state);
+            }
+        }
+    };
+};
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
@@ -388,7 +505,7 @@ var dom = function dom() {
                 attributes = _element2[1],
                 children = _element2[2];
 
-            assert(isString(tagType), 'tag property is not a string', element);
+            assert(isString(tagType), 'tag property is not a string', tagType);
             // capture groups: tagName, id, className, style
             var match = /^ *(\w+) *(?:#([-\w\d]+))? *((?:\.[-\w\d]+)*)? *(?:\|\s*([^\s]{1}[^]*?))? *$/.exec(tagType);
             assert(isArray(match), 'tag property cannot be parsed', tagType);
@@ -620,7 +737,7 @@ var dom = function dom() {
 module.exports = dom;
 
 /***/ }),
-/* 3 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -686,7 +803,7 @@ var history = function history() {
 module.exports = history;
 
 /***/ }),
-/* 4 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -872,7 +989,7 @@ var router = function router() {
 module.exports = router;
 
 /***/ }),
-/* 5 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1012,7 +1129,7 @@ var state = function state() {
 module.exports = state;
 
 /***/ }),
-/* 6 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1020,16 +1137,16 @@ module.exports = state;
 
 var goo = __webpack_require__(1);
 
-var Dialog = __webpack_require__(7);
-var Menu = __webpack_require__(8);
-var Task = __webpack_require__(11);
-var ContextMenu = __webpack_require__(12);
+var Dialog = __webpack_require__(3);
+var Menu = __webpack_require__(4);
+var Task = __webpack_require__(5);
+var ContextMenu = __webpack_require__(2);
 
-var localStorageKey = 'data-663';
+var socketConnection = __webpack_require__(6);
 
 var app = goo(document.body);
 
-app.use({ base: '/C:/Users/Gabriel/Documents/dev/663/src/public/index.html' });
+app.use(socketConnection(app));
 
 var contextMenuAddress = [];
 var dialog = {
@@ -1038,17 +1155,6 @@ var dialog = {
     action: null,
     value: ''
 };
-
-var defaultState = {
-    showCompleted: true,
-    tasks: []
-};
-
-app.setState(JSON.parse(localStorage.getItem(localStorageKey)) || defaultState);
-
-app.use({ watcher: function watcher(state, type) {
-        localStorage.setItem(localStorageKey, JSON.stringify(state));
-    } });
 
 app.use({ action: {
         type: 'TOGGLE_SHOW_COMPLETED',
@@ -1127,7 +1233,7 @@ app.use({ action: {
                 if (!Array.isArray(task)) {
                     task = task.children;
                 }
-                delete task[index];
+                task.splice(index, 1);
             });
             return tasks;
         }
@@ -1258,7 +1364,7 @@ var createContextMenu = function createContextMenu(address, isCompleted) {
     return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
 };
 
-app(function (state) {
+app('/!/:roomId/', function (state) {
     return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
         return addTask([]);
     }, toggleShowCompleted, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
@@ -1267,93 +1373,6 @@ app(function (state) {
 });
 
 window.app = app;
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var dialog = function dialog(hint, defaultValue, submit, hideDialog) {
-    setTimeout(function () {
-        return document.querySelector('.field').focus();
-    }, 0);
-    return [function () {
-        return ['div.dialog-wrapper', {}, [['div.dialog', {}, [['form', { onsubmit: submit }, [['label', {}, [hint || '', ['br'], ['input.field', { type: 'text', value: defaultValue }]]]]]]], ['div.dialog-overlay', { onclick: hideDialog }]]];
-    }];
-};
-
-module.exports = dialog;
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var menu = function menu(showCompleted, addParent, toggleShowCompleted, undo, redo) {
-    return ['div.buttons', {}, [['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
-};
-
-module.exports = menu;
-
-/***/ }),
-/* 9 */,
-/* 10 */,
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
-    var completed = _ref.completed,
-        collapsed = _ref.collapsed,
-        color = _ref.color,
-        description = _ref.description,
-        address = _ref.address,
-        children = _ref.children;
-
-    var isDisplayed = completed && !showCompleted;
-    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
-    var hasChildren = !!children.length;
-    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
-    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
-    return [function () {
-        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
-            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
-            onclick: toggleCollapsed(address)
-        }, [symbol]], ['span.title | background-color:' + color + ';', {
-            onclick: toggleContextMenu(address),
-            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
-        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
-            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
-        })]]]]]]];
-    }];
-};
-
-module.exports = Task;
-
-/***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
-
-var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
-    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
-        return ['div.item', { onclick: function onclick() {
-                return changeColor(color.color);
-            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
-    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
-};
-
-module.exports = contextMenu;
 
 /***/ })
 /******/ ]);

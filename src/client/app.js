@@ -83,7 +83,7 @@ app.use({action: {
             if (!Array.isArray(task)) {
                 task = task.children;
             }
-            delete task[index];
+            task.splice(index, 1);
         });
         return tasks;
     },
