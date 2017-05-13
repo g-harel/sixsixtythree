@@ -5,7 +5,10 @@
   "repository": "https://github.com/g-harel/ECMS.git",
   "license": "MIT",
   "scripts": {
-    "start": "webpack-dev-server --content-base src/public --inline --open"
+    "start": "run-p start:*",
+    "start:mongo": "mongod",
+    "start:server" : "nodemon src/server/server.js",
+    "start:client": "webpack --watch"
   },
   "dependencies": {
     "body-parser": "^1.17.1",
@@ -21,7 +24,6 @@
     "eslint": "^3.15.0",
     "eslint-config-google": "^0.7.1",
     "raw-loader": "^0.5.1",
-    "webpack": "^2.2.1",
-    "webpack-dev-server": "^2.4.5"
+    "webpack": "^2.2.1"
   }
 }

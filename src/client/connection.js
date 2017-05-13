@@ -1,6 +1,8 @@
-const socket = window.io.connect(window.location.origin);
+const socket = window.io.connect(window.location.origin, {reconnectionDelayMax: 500});
 
 module.exports = (app) => {
+    socket.on('reload', () => location.reload());
+
     socket.on('connect', () => {
         socket.emit('join', (window.location.pathname + 'acdefghijklmnopq').substr(3, 16));
     });
@@ -10,15 +12,15 @@ module.exports = (app) => {
     });
 
     socket.on('error', (err) => {
-        console.err(err);
+        console.log(err);
     });
 
-    return {
+    app.use({
         name: 'socket connection',
         watcher: (state, type) => {
             if (type !== '__OVERRIDE__') {
                 socket.emit('update', state);
             }
         },
-    };
+    });
 };

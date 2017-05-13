@@ -277,8 +277,7 @@ var goo = function goo(rootElement) {
     // register a route/controller combo
     var register = function register(path, builder) {
         if (isFunction(path)) {
-            builder = path;
-            path = '';
+            use({ builder: builder });
         }
         use({ route: {
                 path: path,
@@ -426,9 +425,13 @@ module.exports = Task;
 "use strict";
 
 
-var socket = window.io.connect(window.location.origin);
+var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500 });
 
 module.exports = function (app) {
+    socket.on('reload', function () {
+        return location.reload();
+    });
+
     socket.on('connect', function () {
         socket.emit('join', (window.location.pathname + 'acdefghijklmnopq').substr(3, 16));
     });
@@ -438,17 +441,17 @@ module.exports = function (app) {
     });
 
     socket.on('error', function (err) {
-        console.err(err);
+        console.log(err);
     });
 
-    return {
+    app.use({
         name: 'socket connection',
         watcher: function watcher(state, type) {
             if (type !== '__OVERRIDE__') {
                 socket.emit('update', state);
             }
         }
-    };
+    });
 };
 
 /***/ }),
@@ -1146,7 +1149,7 @@ var socketConnection = __webpack_require__(6);
 
 var app = goo(document.body);
 
-app.use(socketConnection(app));
+socketConnection(app);
 
 var contextMenuAddress = [];
 var dialog = {

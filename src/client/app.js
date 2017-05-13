@@ -9,7 +9,7 @@ const socketConnection = require('./connection');
 
 const app = goo(document.body);
 
-app.use(socketConnection(app));
+socketConnection(app);
 
 let contextMenuAddress = [];
 let dialog = {
