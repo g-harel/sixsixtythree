@@ -152,3 +152,12 @@ li span {
     margin: 5px 0 0 0;
     padding: 0 3px;
 }
+
+.home {
+    text-align: center;
+    padding: 20vh 0 0 0;
+}
+
+.home .button {
+    margin: 10px;
+}

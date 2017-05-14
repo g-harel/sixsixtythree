@@ -1,5 +1,8 @@
 const menu = (showCompleted, addParent, toggleShowCompleted, undo, redo) => (
     ['div.buttons', {}, [
+        ['div.button', {onclick: () => window.location = '/'}, [
+            'HOME',
+        ]],
         ['div.button', {onclick: addParent}, [
             'ADD PARENT',
         ]],

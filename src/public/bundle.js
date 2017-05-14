@@ -277,7 +277,9 @@ var goo = function goo(rootElement) {
     // register a route/controller combo
     var register = function register(path, builder) {
         if (isFunction(path)) {
+            builder = path;
             use({ builder: builder });
+            return;
         }
         use({ route: {
                 path: path,
@@ -378,7 +380,9 @@ module.exports = dialog;
 
 
 var menu = function menu(showCompleted, addParent, toggleShowCompleted, undo, redo) {
-    return ['div.buttons', {}, [['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
+    return ['div.buttons', {}, [['div.button', { onclick: function onclick() {
+            return window.location = '/';
+        } }, ['HOME']], ['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
 };
 
 module.exports = menu;
@@ -419,42 +423,7 @@ var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu
 module.exports = Task;
 
 /***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500 });
-
-module.exports = function (app) {
-    socket.on('reload', function () {
-        return location.reload();
-    });
-
-    socket.on('connect', function () {
-        socket.emit('join', (window.location.pathname + 'acdefghijklmnopq').substr(3, 16));
-    });
-
-    socket.on('update', function (state) {
-        app.setState(state);
-    });
-
-    socket.on('error', function (err) {
-        console.log(err);
-    });
-
-    app.use({
-        name: 'socket connection',
-        watcher: function watcher(state, type) {
-            if (type !== '__OVERRIDE__') {
-                socket.emit('update', state);
-            }
-        }
-    });
-};
-
-/***/ }),
+/* 6 */,
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1140,242 +1109,371 @@ module.exports = state;
 
 var goo = __webpack_require__(1);
 
+var iocon = __webpack_require__(12);
+
+var mainPage = __webpack_require__(13);
+var homePage = __webpack_require__(14);
+
+var app = goo(document.body);
+
+iocon(app);
+
+app(homePage(app));
+
+app('/!/:roomId/', mainPage(app));
+
+window.app = app;
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+
+var getRoomId = function getRoomId() {
+    return window.location.pathname.replace(/^\/!\//, '').replace(/\/$/, '');
+};
+
+var iocon = function iocon(app) {
+    socket.on('connect', function () {
+        return socket.emit('join', getRoomId());
+    });
+
+    socket.on('reload', function () {
+        return location.reload();
+    });
+
+    socket.on('update', function (state) {
+        return app.setState(state);
+    });
+
+    socket.on('error', function (err) {
+        return console.log(err);
+    });
+
+    app.use({ watcher: function watcher(state, type) {
+            if (type !== '__OVERRIDE__') {
+                socket.emit('update', state);
+            }
+        }
+    });
+};
+
+module.exports = iocon;
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
 var Dialog = __webpack_require__(3);
 var Menu = __webpack_require__(4);
 var Task = __webpack_require__(5);
 var ContextMenu = __webpack_require__(2);
 
-var socketConnection = __webpack_require__(6);
-
-var app = goo(document.body);
-
-socketConnection(app);
-
-var contextMenuAddress = [];
-var dialog = {
-    hidden: true,
-    hint: '',
-    action: null,
-    value: ''
-};
-
-app.use({ action: {
-        type: 'TOGGLE_SHOW_COMPLETED',
-        target: ['showCompleted'],
-        handler: function handler(value) {
-            return !value;
-        }
-    } });
-
-var navigate = function navigate(object, address, callback) {
-    if (address.length === 0 || object === undefined) {
-        callback(object);
-    } else {
-        var nextKey = address.shift();
-        if (nextKey !== 'children' && address.length > 0) {
-            address.unshift('children');
-        }
-        navigate(object[nextKey], address, callback);
-    }
-};
-
-var createTask = function createTask(description, address) {
-    return {
-        completed: false,
-        collapsed: false,
-        color: 'transparent',
-        description: description,
-        address: address,
-        children: []
-    };
-};
-
-app.use({ action: {
-        type: 'ADD',
-        target: ['tasks'],
-        handler: function handler(tasks, _ref) {
-            var address = _ref.address,
-                description = _ref.description;
-
-            var addr = address.slice();
-            navigate(tasks, address.slice(), function (task) {
-                if (!Array.isArray(task)) {
-                    task = task.children;
-                }
-                addr.push(task.length);
-                task.push(createTask(description, addr));
-            });
-            return tasks;
-        }
-    } });
-
-app.use({ action: {
-        type: 'EDIT',
-        target: ['tasks'],
-        handler: function handler(tasks, _ref2) {
-            var address = _ref2.address,
-                key = _ref2.key,
-                value = _ref2.value;
-
-            navigate(tasks, address, function (task) {
-                task[key] = value;
-            });
-            return tasks;
-        }
-    } });
-
-app.use({ action: {
-        type: 'REMOVE',
-        target: ['tasks'],
-        handler: function handler(tasks, _ref3) {
-            var address = _ref3.address;
-
-            var addr = address.slice();
-            var index = addr.pop();
-            navigate(tasks, addr, function (task) {
-                if (!Array.isArray(task)) {
-                    task = task.children;
-                }
-                task.splice(index, 1);
-            });
-            return tasks;
-        }
-    } });
-
-var undo = function undo() {
-    contextMenuAddress = [];
-    app.undo();
-};
-
-var redo = function redo() {
-    contextMenuAddress = [];
-    app.redo();
-};
-
-var hideDialog = function hideDialog() {
-    dialog = {
+var mainPage = function mainPage(app) {
+    var contextMenuAddress = [];
+    var dialog = {
         hidden: true,
         hint: '',
         action: null,
         value: ''
     };
-    app.update();
-};
 
-var showDialog = function showDialog(hint) {
-    var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-    var _action = arguments[2];
+    app.use({ action: {
+            type: 'TOGGLE_SHOW_COMPLETED',
+            target: ['showCompleted'],
+            handler: function handler(value) {
+                return !value;
+            }
+        } });
 
-    dialog = {
-        hidden: false,
-        hint: hint,
-        value: value,
-        action: function action(e) {
-            e.preventDefault();
-            _action(e.target[0].value);
-            hideDialog();
-        }
-    };
-    contextMenuAddress = [];
-    app.update();
-};
-
-var addTask = function addTask(address) {
-    showDialog('Add a task', '', function (description) {
-        app.act('ADD', { description: description, address: address });
-    });
-};
-
-var toggleShowCompleted = function toggleShowCompleted() {
-    app.act('TOGGLE_SHOW_COMPLETED');
-};
-
-var toggleCollapsed = function toggleCollapsed(address) {
-    return function () {
-        navigate(app.getState().tasks, address.slice(), function (task) {
-            app.act('EDIT', {
-                address: address,
-                key: 'collapsed',
-                value: !task.collapsed
-            });
-        });
-    };
-};
-
-var toggleContextMenu = function toggleContextMenu(address) {
-    return function () {
-        if (contextMenuAddress.toString() === address.toString()) {
-            contextMenuAddress = [];
+    var navigate = function navigate(object, address, callback) {
+        if (address.length === 0 || object === undefined) {
+            callback(object);
         } else {
-            contextMenuAddress = address.slice();
+            var nextKey = address.shift();
+            if (nextKey !== 'children' && address.length > 0) {
+                address.unshift('children');
+            }
+            navigate(object[nextKey], address, callback);
         }
+    };
+
+    var createTask = function createTask(description, address) {
+        return {
+            completed: false,
+            collapsed: false,
+            color: 'transparent',
+            description: description,
+            address: address,
+            children: []
+        };
+    };
+
+    app.use({ action: {
+            type: 'ADD',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref) {
+                var address = _ref.address,
+                    description = _ref.description;
+
+                var addr = address.slice();
+                navigate(tasks, address.slice(), function (task) {
+                    if (!Array.isArray(task)) {
+                        task = task.children;
+                    }
+                    addr.push(task.length);
+                    task.push(createTask(description, addr));
+                });
+                return tasks;
+            }
+        } });
+
+    app.use({ action: {
+            type: 'EDIT',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref2) {
+                var address = _ref2.address,
+                    key = _ref2.key,
+                    value = _ref2.value;
+
+                navigate(tasks, address, function (task) {
+                    task[key] = value;
+                });
+                return tasks;
+            }
+        } });
+
+    app.use({ action: {
+            type: 'REMOVE',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref3) {
+                var address = _ref3.address;
+
+                var addr = address.slice();
+                var index = addr.pop();
+                navigate(tasks, addr, function (task) {
+                    if (!Array.isArray(task)) {
+                        task = task.children;
+                    }
+                    task.splice(index, 1);
+                });
+                return tasks;
+            }
+        } });
+
+    var undo = function undo() {
+        contextMenuAddress = [];
+        app.undo();
+    };
+
+    var redo = function redo() {
+        contextMenuAddress = [];
+        app.redo();
+    };
+
+    var hideDialog = function hideDialog() {
+        dialog = {
+            hidden: true,
+            hint: '',
+            action: null,
+            value: ''
+        };
         app.update();
     };
-};
 
-var toggleComplete = function toggleComplete(address) {
-    return function () {
-        navigate(app.getState().tasks, address.slice(), function (task) {
-            app.act('EDIT', {
-                address: address,
-                key: 'completed',
-                value: !task.completed
-            });
-        });
+    var showDialog = function showDialog(hint) {
+        var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+        var _action = arguments[2];
+
+        dialog = {
+            hidden: false,
+            hint: hint,
+            value: value,
+            action: function action(e) {
+                e.preventDefault();
+                _action(e.target[0].value);
+                hideDialog();
+            }
+        };
+        contextMenuAddress = [];
+        app.update();
     };
-};
 
-var addChild = function addChild(address) {
-    return function () {
-        showDialog('Add a child task', '', function (description) {
+    var addTask = function addTask(address) {
+        showDialog('Add a task', '', function (description) {
             app.act('ADD', { description: description, address: address });
         });
     };
-};
 
-var changeColor = function changeColor(address) {
-    return function (color) {
-        app.act('EDIT', {
-            address: address,
-            key: 'color',
-            value: color
-        });
+    var toggleShowCompleted = function toggleShowCompleted() {
+        app.act('TOGGLE_SHOW_COMPLETED');
     };
-};
 
-var editTask = function editTask(address) {
-    return function () {
-        navigate(app.getState().tasks, address.slice(), function (task) {
-            showDialog('Edit task', task.description, function (description) {
+    var toggleCollapsed = function toggleCollapsed(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
                 app.act('EDIT', {
                     address: address,
-                    key: 'description',
-                    value: description
+                    key: 'collapsed',
+                    value: !task.collapsed
                 });
             });
-        });
+        };
+    };
+
+    var toggleContextMenu = function toggleContextMenu(address) {
+        return function () {
+            if (contextMenuAddress.toString() === address.toString()) {
+                contextMenuAddress = [];
+            } else {
+                contextMenuAddress = address.slice();
+            }
+            app.update();
+        };
+    };
+
+    var toggleComplete = function toggleComplete(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
+                app.act('EDIT', {
+                    address: address,
+                    key: 'completed',
+                    value: !task.completed
+                });
+            });
+        };
+    };
+
+    var addChild = function addChild(address) {
+        return function () {
+            showDialog('Add a child task', '', function (description) {
+                app.act('ADD', { description: description, address: address });
+            });
+        };
+    };
+
+    var changeColor = function changeColor(address) {
+        return function (color) {
+            app.act('EDIT', {
+                address: address,
+                key: 'color',
+                value: color
+            });
+        };
+    };
+
+    var editTask = function editTask(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
+                showDialog('Edit task', task.description, function (description) {
+                    app.act('EDIT', {
+                        address: address,
+                        key: 'description',
+                        value: description
+                    });
+                });
+            });
+        };
+    };
+
+    var remove = function remove(address) {
+        return function () {
+            app.act('REMOVE', { address: address });
+        };
+    };
+
+    var createContextMenu = function createContextMenu(address, isCompleted) {
+        return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
+    };
+
+    return function (state) {
+        return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
+            return addTask([]);
+        }, toggleShowCompleted, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
+            return [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu];
+        })]]]]];
     };
 };
 
-var remove = function remove(address) {
+module.exports = mainPage;
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var Dialog = __webpack_require__(3);
+
+var homePage = function homePage(app) {
+    var dialog = {
+        hidden: true,
+        hint: '',
+        action: null,
+        value: ''
+    };
+
+    var generateName = function generateName() {
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+        var name = [];
+        for (var i = 0; i < 16; ++i) {
+            name.push(chars[Math.floor(Math.random() * chars.length)]);
+        }
+        return name.join('');
+    };
+
+    var joinRoom = function joinRoom(name) {
+        return function () {
+            if (name.match(/^[\w-]+$/) === null) {
+                hideDialog();
+                pickName({ value: name + ' - ERR invalid character(s)' });
+                return;
+            }
+            window.location = '/!/' + name + '/';
+        };
+    };
+
+    var hideDialog = function hideDialog() {
+        dialog = {
+            hidden: true,
+            hint: '',
+            action: null,
+            value: ''
+        };
+        app.update();
+    };
+
+    var pickName = function pickName(_ref) {
+        var _ref$value = _ref.value,
+            value = _ref$value === undefined ? '' : _ref$value;
+
+        console.log('pick' + value);
+        dialog = {
+            hidden: false,
+            hint: 'ROOM NAME',
+            action: function action(e) {
+                e.preventDefault();
+                joinRoom(e.target[0].value)();
+            },
+            value: value
+        };
+        app.update();
+    };
+
     return function () {
-        app.act('REMOVE', { address: address });
+        return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], ['div.home', {}, [['div.button', { onclick: joinRoom(generateName()) }, ['GENERATE RANDOM ROOM']], ['br'], 'OR', ['br'], ['div.button', { onclick: pickName }, ['PICK ROOM']]]]]];
     };
 };
 
-var createContextMenu = function createContextMenu(address, isCompleted) {
-    return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
-};
-
-app('/!/:roomId/', function (state) {
-    return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
-        return addTask([]);
-    }, toggleShowCompleted, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
-        return [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu];
-    })]]]]];
-});
-
-window.app = app;
+module.exports = homePage;
 
 /***/ })
 /******/ ]);

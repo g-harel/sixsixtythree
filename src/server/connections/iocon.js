@@ -3,13 +3,16 @@ const socketio = require('socket.io');
 const iocon = (server, readRoom, writeRoom) => {
     const io = socketio(server);
 
-    // reload all connections when server restarts
+    // reload all connections when server restarts (for development)
     setTimeout(() => {
         io.sockets.emit('reload');
     }, 500);
 
     io.on('connection', (socket) => {
         socket.on('join', (roomId) => {
+            if (socket.roomId) {
+                socket.leave(roomId);
+            }
             socket.join(roomId);
             socket.roomId = roomId;
             readRoom(roomId,
