@@ -23,7 +23,7 @@ const homePage = (app) => {
             pickName({value: name + ' - ERR invalid character(s)'});
             return;
         }
-        window.location = `/!/${name}/`;
+        app.redirect(`/!/${name}/`);
     };
 
     const hideDialog = () => {
@@ -37,7 +37,6 @@ const homePage = (app) => {
     };
 
     const pickName = ({value = ''}) => {
-        console.log('pick' + value);
         dialog = {
             hidden: false,
             hint: 'ROOM NAME',
@@ -50,7 +49,7 @@ const homePage = (app) => {
         app.update();
     };
 
-    return () => (
+    return () => () => (
         ['div', {}, [
             (dialog.hidden
                 ? null

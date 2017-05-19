@@ -1,6 +1,6 @@
-const menu = (showCompleted, addParent, toggleShowCompleted, undo, redo) => (
+const menu = (showCompleted, addParent, toggleShowCompleted, redirect, undo, redo) => (
     ['div.buttons', {}, [
-        ['div.button', {onclick: () => window.location = '/'}, [
+        ['div.button', {onclick: () => redirect('/')}, [
             'HOME',
         ]],
         ['div.button', {onclick: addParent}, [

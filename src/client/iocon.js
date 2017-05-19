@@ -1,27 +1,19 @@
 const socket = window.io.connect(window.location.origin, {reconnectionDelayMax: 500, reconnectionAttempts: 25});
 
-const getRoomId = () => {
-    return window.location.pathname
-        .replace(/^\/!\//, '')
-        .replace(/\/$/, '');
-};
-
-const iocon = (app) => {
-    socket.on('connect', () => socket.emit('join', getRoomId()));
-
+const iocon = ({onJoin, onChange}) => {
     socket.on('reload', () => location.reload());
 
-    socket.on('update', (state) => app.setState(state));
+    socket.on('join', (roomId, state) => onJoin(roomId, state));
+
+    socket.on('update', (state) => onChange(state));
 
     socket.on('error', (err) => console.log(err));
 
-    app.use({watcher:
-        (state, type) => {
-            if (type !== '__OVERRIDE__') {
-                socket.emit('update', state);
-            }
-        },
-    });
+    const join = (roomId) => roomId && socket.emit('join', roomId);
+
+    const emitChange = (state) => socket.emit('update', state);
+
+    return {join, emitChange};
 };
 
 module.exports = iocon;

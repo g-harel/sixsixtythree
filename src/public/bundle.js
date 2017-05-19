@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 11);
+/******/ 	return __webpack_require__(__webpack_require__.s = 12);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -209,10 +209,70 @@ module.exports = utils;
 "use strict";
 
 
-var dom = __webpack_require__(7);
-var state = __webpack_require__(10);
-var router = __webpack_require__(9);
-var history = __webpack_require__(8)();
+var dialog = function dialog(hint, defaultValue, submit, hideDialog) {
+    setTimeout(function () {
+        return document.querySelector('.field').focus();
+    }, 0);
+    return [function () {
+        return ['div.dialog-wrapper', {}, [['div.dialog', {}, [['form', { onsubmit: submit }, [['label', {}, [hint || '', ['br'], ['input.field', { type: 'text', value: defaultValue }]]]]]]], ['div.dialog-overlay', { onclick: hideDialog }]]];
+    }];
+};
+
+module.exports = dialog;
+
+/***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+
+var iocon = function iocon(_ref) {
+    var onJoin = _ref.onJoin,
+        onChange = _ref.onChange;
+
+    socket.on('reload', function () {
+        return location.reload();
+    });
+
+    socket.on('join', function (roomId, state) {
+        return onJoin(roomId, state);
+    });
+
+    socket.on('update', function (state) {
+        return onChange(state);
+    });
+
+    socket.on('error', function (err) {
+        return console.log(err);
+    });
+
+    var join = function join(roomId) {
+        return roomId && socket.emit('join', roomId);
+    };
+
+    var emitChange = function emitChange(state) {
+        return socket.emit('update', state);
+    };
+
+    return { join: join, emitChange: emitChange };
+};
+
+module.exports = iocon;
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var dom = __webpack_require__(6);
+var state = __webpack_require__(11);
+var router = __webpack_require__(8);
+var history = __webpack_require__(7)();
 
 var _require = __webpack_require__(0)(),
     isFunction = _require.isFunction,
@@ -220,15 +280,13 @@ var _require = __webpack_require__(0)(),
     deepCopy = _require.deepCopy;
 
 var goo = function goo(rootElement) {
-    var _state = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { __unset__: true };
-
-    var _window = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : window;
+    var _window = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window;
 
     var domHandler = dom(_window, rootElement);
     var stateHandler = state();
     var routeHandler = router(_window);
 
-    _state = deepCopy(_state);
+    var _state = { __unset__: true };
 
     // forwarding use calls
     var use = function use(blob) {
@@ -263,9 +321,18 @@ var goo = function goo(rootElement) {
             }
         } });
 
+    var update = function update() {
+        use({ state: _state });
+    };
+
     // adding currentState and forwarding act calls
     var act = function act(type, params) {
         assert(!(_state && _state.__unset__) || type === '__OVERRIDE__', 'cannot act on state before it has been set');
+        if (isFunction(type)) {
+            type();
+            update();
+            return;
+        }
         stateHandler.act(_state, type, params);
     };
 
@@ -277,17 +344,14 @@ var goo = function goo(rootElement) {
     // register a route/controller combo
     var register = function register(path, builder) {
         if (isFunction(path)) {
-            builder = path;
+            builder = path();
             use({ builder: builder });
             return;
         }
         use({ route: {
                 path: path,
                 callback: function callback(params) {
-                    var _builder = function _builder(newState) {
-                        return builder(newState, params);
-                    };
-                    use({ builder: _builder });
+                    use({ builder: builder(params) });
                 }
             } });
     };
@@ -305,10 +369,6 @@ var goo = function goo(rootElement) {
         return deepCopy(_state);
     };
 
-    var update = function update() {
-        use({ state: _state });
-    };
-
     return Object.assign(register, {
         setState: setState,
         s: setState,
@@ -322,8 +382,7 @@ var goo = function goo(rootElement) {
         update: update,
         u: update,
         undo: undo,
-        redo: redo,
-        _: {}
+        redo: redo
     });
 };
 
@@ -336,56 +395,76 @@ if (!!window) {
 }
 
 /***/ }),
-/* 2 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
-
-var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
-    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
-        return ['div.item', { onclick: function onclick() {
-                return changeColor(color.color);
-            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
-    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
-};
-
-module.exports = contextMenu;
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var dialog = function dialog(hint, defaultValue, submit, hideDialog) {
-    setTimeout(function () {
-        return document.querySelector('.field').focus();
-    }, 0);
-    return [function () {
-        return ['div.dialog-wrapper', {}, [['div.dialog', {}, [['form', { onsubmit: submit }, [['label', {}, [hint || '', ['br'], ['input.field', { type: 'text', value: defaultValue }]]]]]]], ['div.dialog-overlay', { onclick: hideDialog }]]];
-    }];
-};
-
-module.exports = dialog;
-
-/***/ }),
 /* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var menu = function menu(showCompleted, addParent, toggleShowCompleted, undo, redo) {
-    return ['div.buttons', {}, [['div.button', { onclick: function onclick() {
-            return window.location = '/';
-        } }, ['HOME']], ['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
+var Dialog = __webpack_require__(1);
+
+var homePage = function homePage(app) {
+    var dialog = {
+        hidden: true,
+        hint: '',
+        action: null,
+        value: ''
+    };
+
+    var generateName = function generateName() {
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+        var name = [];
+        for (var i = 0; i < 16; ++i) {
+            name.push(chars[Math.floor(Math.random() * chars.length)]);
+        }
+        return name.join('');
+    };
+
+    var joinRoom = function joinRoom(name) {
+        return function () {
+            if (name.match(/^[\w-]+$/) === null) {
+                hideDialog();
+                pickName({ value: name + ' - ERR invalid character(s)' });
+                return;
+            }
+            app.redirect('/!/' + name + '/');
+        };
+    };
+
+    var hideDialog = function hideDialog() {
+        dialog = {
+            hidden: true,
+            hint: '',
+            action: null,
+            value: ''
+        };
+        app.update();
+    };
+
+    var pickName = function pickName(_ref) {
+        var _ref$value = _ref.value,
+            value = _ref$value === undefined ? '' : _ref$value;
+
+        dialog = {
+            hidden: false,
+            hint: 'ROOM NAME',
+            action: function action(e) {
+                e.preventDefault();
+                joinRoom(e.target[0].value)();
+            },
+            value: value
+        };
+        app.update();
+    };
+
+    return function () {
+        return function () {
+            return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], ['div.home', {}, [['div.button', { onclick: joinRoom(generateName()) }, ['GENERATE RANDOM ROOM']], ['br'], 'OR', ['br'], ['div.button', { onclick: pickName }, ['PICK ROOM']]]]]];
+        };
+    };
 };
 
-module.exports = menu;
+module.exports = homePage;
 
 /***/ }),
 /* 5 */
@@ -394,37 +473,273 @@ module.exports = menu;
 "use strict";
 
 
-var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
-    var completed = _ref.completed,
-        collapsed = _ref.collapsed,
-        color = _ref.color,
-        description = _ref.description,
-        address = _ref.address,
-        children = _ref.children;
+var iocon = __webpack_require__(2);
 
-    var isDisplayed = completed && !showCompleted;
-    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
-    var hasChildren = !!children.length;
-    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
-    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
-    return [function () {
-        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
-            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
-            onclick: toggleCollapsed(address)
-        }, [symbol]], ['span.title | background-color:' + color + ';', {
-            onclick: toggleContextMenu(address),
-            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
-        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
-            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
-        })]]]]]]];
-    }];
+var LoadingPage = __webpack_require__(16);
+
+var Dialog = __webpack_require__(1);
+var Menu = __webpack_require__(14);
+var Task = __webpack_require__(15);
+var ContextMenu = __webpack_require__(13);
+
+var mainPage = function mainPage(app) {
+    var contextMenuAddress = [];
+    var dialog = {
+        hidden: true,
+        hint: '',
+        action: null,
+        value: ''
+    };
+
+    app.use({ action: {
+            type: 'TOGGLE_SHOW_COMPLETED',
+            target: ['showCompleted'],
+            handler: function handler(value) {
+                return !value;
+            }
+        } });
+
+    var navigate = function navigate(object, address, callback) {
+        if (address.length === 0 || object === undefined) {
+            callback(object);
+        } else {
+            var nextKey = address.shift();
+            if (nextKey !== 'children' && address.length > 0) {
+                address.unshift('children');
+            }
+            navigate(object[nextKey], address, callback);
+        }
+    };
+
+    var createTask = function createTask(description, address) {
+        return {
+            completed: false,
+            collapsed: false,
+            color: 'transparent',
+            description: description,
+            address: address,
+            children: []
+        };
+    };
+
+    app.use({ action: {
+            type: 'ADD',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref) {
+                var address = _ref.address,
+                    description = _ref.description;
+
+                var addr = address.slice();
+                navigate(tasks, address.slice(), function (task) {
+                    if (!Array.isArray(task)) {
+                        task = task.children;
+                    }
+                    addr.push(task.length);
+                    task.push(createTask(description, addr));
+                });
+                return tasks;
+            }
+        } });
+
+    app.use({ action: {
+            type: 'EDIT',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref2) {
+                var address = _ref2.address,
+                    key = _ref2.key,
+                    value = _ref2.value;
+
+                navigate(tasks, address, function (task) {
+                    task[key] = value;
+                });
+                return tasks;
+            }
+        } });
+
+    app.use({ action: {
+            type: 'REMOVE',
+            target: ['tasks'],
+            handler: function handler(tasks, _ref3) {
+                var address = _ref3.address;
+
+                var addr = address.slice();
+                var index = addr.pop();
+                navigate(tasks, addr, function (task) {
+                    if (!Array.isArray(task)) {
+                        task = task.children;
+                    }
+                    task.splice(index, 1);
+                });
+                return tasks;
+            }
+        } });
+
+    var undo = function undo() {
+        contextMenuAddress = [];
+        app.undo();
+    };
+
+    var redo = function redo() {
+        contextMenuAddress = [];
+        app.redo();
+    };
+
+    var hideDialog = function hideDialog() {
+        dialog = {
+            hidden: true,
+            hint: '',
+            action: null,
+            value: ''
+        };
+        app.update();
+    };
+
+    var showDialog = function showDialog(hint) {
+        var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+        var _action = arguments[2];
+
+        dialog = {
+            hidden: false,
+            hint: hint,
+            value: value,
+            action: function action(e) {
+                e.preventDefault();
+                _action(e.target[0].value);
+                hideDialog();
+            }
+        };
+        contextMenuAddress = [];
+        app.update();
+    };
+
+    var addTask = function addTask(address) {
+        showDialog('Add a task', '', function (description) {
+            app.act('ADD', { description: description, address: address });
+        });
+    };
+
+    var toggleShowCompleted = function toggleShowCompleted() {
+        app.act('TOGGLE_SHOW_COMPLETED');
+    };
+
+    var toggleCollapsed = function toggleCollapsed(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
+                app.act('EDIT', {
+                    address: address,
+                    key: 'collapsed',
+                    value: !task.collapsed
+                });
+            });
+        };
+    };
+
+    var toggleContextMenu = function toggleContextMenu(address) {
+        return function () {
+            if (contextMenuAddress.toString() === address.toString()) {
+                contextMenuAddress = [];
+            } else {
+                contextMenuAddress = address.slice();
+            }
+            app.update();
+        };
+    };
+
+    var toggleComplete = function toggleComplete(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
+                app.act('EDIT', {
+                    address: address,
+                    key: 'completed',
+                    value: !task.completed
+                });
+            });
+        };
+    };
+
+    var addChild = function addChild(address) {
+        return function () {
+            showDialog('Add a child task', '', function (description) {
+                app.act('ADD', { description: description, address: address });
+            });
+        };
+    };
+
+    var changeColor = function changeColor(address) {
+        return function (color) {
+            app.act('EDIT', {
+                address: address,
+                key: 'color',
+                value: color
+            });
+        };
+    };
+
+    var editTask = function editTask(address) {
+        return function () {
+            navigate(app.getState().tasks, address.slice(), function (task) {
+                showDialog('Edit task', task.description, function (description) {
+                    app.act('EDIT', {
+                        address: address,
+                        key: 'description',
+                        value: description
+                    });
+                });
+            });
+        };
+    };
+
+    var remove = function remove(address) {
+        return function () {
+            app.act('REMOVE', { address: address });
+        };
+    };
+
+    var createContextMenu = function createContextMenu(address, isCompleted) {
+        return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
+    };
+
+    var joinedRoom = false;
+
+    var _iocon = iocon({
+        onJoin: function onJoin(roomId, state) {
+            joinedRoom = true;
+            app.setState(state);
+            app.act('__RESET__');
+        },
+        onChange: function onChange(state) {
+            app.setState(state);
+        }
+    }),
+        join = _iocon.join,
+        emitChange = _iocon.emitChange;
+
+    app.use({ watcher: function watcher(state) {
+            return emitChange(state);
+        } });
+
+    return function (_ref4) {
+        var roomId = _ref4.roomId;
+
+        joinedRoom = false;
+        join(roomId);
+        return function (state) {
+            if (!joinedRoom) {
+                return [LoadingPage];
+            }
+            return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
+                return addTask([]);
+            }, toggleShowCompleted, app.redirect, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
+                return [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu];
+            })]]]]];
+        };
+    };
 };
 
-module.exports = Task;
+module.exports = mainPage;
 
 /***/ }),
-/* 6 */,
-/* 7 */
+/* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -709,7 +1024,7 @@ var dom = function dom() {
 module.exports = dom;
 
 /***/ }),
-/* 8 */
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -752,8 +1067,18 @@ var history = function history() {
         }
     };
 
+    var resetAction = {
+        type: '__RESET__',
+        target: [],
+        handler: function handler() {
+            past = [];
+            future = [];
+            return current;
+        }
+    };
+
     var updateState = function updateState(state, type) {
-        if (type[0] === ignorePrefix) {
+        if (type === '__RESET__' || type[0] === ignorePrefix) {
             return;
         }
         if (type !== 'UNDO' && type !== 'REDO') {
@@ -767,7 +1092,7 @@ var history = function history() {
     };
 
     return {
-        action: [undoAction, redoAction],
+        action: [undoAction, redoAction, resetAction],
         watcher: updateState
     };
 };
@@ -775,43 +1100,26 @@ var history = function history() {
 module.exports = history;
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
+var pathToRegexp = __webpack_require__(10);
+
 var _require = __webpack_require__(0)(),
-    deepCopy = _require.deepCopy,
     assert = _require.assert,
-    isDefined = _require.isDefined,
     isString = _require.isString,
     isObject = _require.isObject,
     isFunction = _require.isFunction,
     blobHandler = _require.blobHandler;
 
-var paramKey = ':params';
-var callbackKey = ':callback';
-
-// creates blank single-level route object
-var mkdir = function mkdir() {
-    var temp = {};
-    temp[paramKey] = {};
-    return temp;
-};
-
-// splits url path into array
-var explodePath = function explodePath(path) {
-    return path.replace(/\?[^]*$/g, '').split('/').map(function (p) {
-        return p.trim();
-    });
-};
-
 var router = function router() {
     var _window = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : window;
 
-    // store all the registered routes in an encoded format
-    var pathStore = mkdir();
+    // store all the registered routes
+    var pathStore = [];
 
     // store base url to prepend to all addresses
     var baseUrl = '';
@@ -837,21 +1145,9 @@ var router = function router() {
     // add a route/callback combo to the store given as argument
     var register = function register(store) {
         return function (path, callback) {
-            var explodedPath = explodePath(path);
-            var currentLevel = store;
-            explodedPath.forEach(function (token, i) {
-                if (token[0] === ':') {
-                    currentLevel[paramKey][token.substring(1)] = currentLevel[paramKey][token.substring(1)] || [];
-                    var defaultObj = mkdir();
-                    currentLevel[paramKey][token.substring(1)].push(defaultObj);
-                    currentLevel = defaultObj;
-                } else {
-                    currentLevel[token] = currentLevel[token] || mkdir();
-                    currentLevel = currentLevel[token];
-                }
-                if (i === explodedPath.length - 1) {
-                    currentLevel[callbackKey] = callback;
-                }
+            store.push({
+                pattern: pathToRegexp(path, [], { strict: true }),
+                callback: callback
             });
         };
     };
@@ -860,31 +1156,22 @@ var router = function router() {
         who's route matches path argument*/
     var fetch = function fetch(store) {
         return function (path, params) {
-            var explodedPath = explodePath(path);
-            var explore = function explore(fragment, path, params) {
-                path = path.slice();
-                params = deepCopy(params);
-                if (path.length === 0) {
-                    if (fragment[callbackKey]) {
-                        fragment[callbackKey](params);
-                        found = true;
-                    }
-                } else {
-                    var next = path.shift();
-                    if (isDefined(fragment[next])) {
-                        explore(fragment[next], path, params);
-                    }
-                    Object.keys(fragment[paramKey]).forEach(function (param) {
-                        fragment[paramKey][param].forEach(function (p) {
-                            var temp = {};
-                            temp[param] = next;
-                            explore(p, path, Object.assign(params, temp));
-                        });
-                    });
-                }
-            };
             var found = false;
-            explore(store, explodedPath, params);
+            store.forEach(function (registeredPath) {
+                if (found) {
+                    return;
+                }
+                var test = registeredPath.pattern.exec(path);
+                if (test === null) {
+                    return;
+                }
+                found = true;
+                test.shift();
+                registeredPath.pattern.keys.forEach(function (key, i) {
+                    params[key.name] = test[i];
+                });
+                registeredPath.callback(params);
+            });
             return found;
         };
     };
@@ -907,7 +1194,7 @@ var router = function router() {
         assert(isFunction(callback), 'callback for path is not a function\n>>>' + path, callback);
         register(pathStore)(path, callback);
         // chacking new path against current pathname
-        var temp = mkdir();
+        var temp = [];
         register(temp)(path, callback);
         fetch(temp)(currentPath, _window.history.state || {});
     };
@@ -961,7 +1248,453 @@ var router = function router() {
 module.exports = router;
 
 /***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = Array.isArray || function (arr) {
+  return Object.prototype.toString.call(arr) == '[object Array]';
+};
+
+/***/ }),
 /* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var isarray = __webpack_require__(9);
+
+/**
+ * Expose `pathToRegexp`.
+ */
+module.exports = pathToRegexp;
+module.exports.parse = parse;
+module.exports.compile = compile;
+module.exports.tokensToFunction = tokensToFunction;
+module.exports.tokensToRegExp = tokensToRegExp;
+
+/**
+ * The main path matching regexp utility.
+ *
+ * @type {RegExp}
+ */
+var PATH_REGEXP = new RegExp([
+// Match escaped characters that would otherwise appear in future matches.
+// This allows the user to escape special characters that won't transform.
+'(\\\\.)',
+// Match Express-style parameters and un-named parameters with a prefix
+// and optional suffixes. Matches appear as:
+//
+// "/:test(\\d+)?" => ["/", "test", "\d+", undefined, "?", undefined]
+// "/route(\\d+)"  => [undefined, undefined, undefined, "\d+", undefined, undefined]
+// "/*"            => ["/", undefined, undefined, undefined, undefined, "*"]
+'([\\/.])?(?:(?:\\:(\\w+)(?:\\(((?:\\\\.|[^\\\\()])+)\\))?|\\(((?:\\\\.|[^\\\\()])+)\\))([+*?])?|(\\*))'].join('|'), 'g');
+
+/**
+ * Parse a string for the raw tokens.
+ *
+ * @param  {string}  str
+ * @param  {Object=} options
+ * @return {!Array}
+ */
+function parse(str, options) {
+  var tokens = [];
+  var key = 0;
+  var index = 0;
+  var path = '';
+  var defaultDelimiter = options && options.delimiter || '/';
+  var res;
+
+  while ((res = PATH_REGEXP.exec(str)) != null) {
+    var m = res[0];
+    var escaped = res[1];
+    var offset = res.index;
+    path += str.slice(index, offset);
+    index = offset + m.length;
+
+    // Ignore already escaped sequences.
+    if (escaped) {
+      path += escaped[1];
+      continue;
+    }
+
+    var next = str[index];
+    var prefix = res[2];
+    var name = res[3];
+    var capture = res[4];
+    var group = res[5];
+    var modifier = res[6];
+    var asterisk = res[7];
+
+    // Push the current path onto the tokens.
+    if (path) {
+      tokens.push(path);
+      path = '';
+    }
+
+    var partial = prefix != null && next != null && next !== prefix;
+    var repeat = modifier === '+' || modifier === '*';
+    var optional = modifier === '?' || modifier === '*';
+    var delimiter = res[2] || defaultDelimiter;
+    var pattern = capture || group;
+
+    tokens.push({
+      name: name || key++,
+      prefix: prefix || '',
+      delimiter: delimiter,
+      optional: optional,
+      repeat: repeat,
+      partial: partial,
+      asterisk: !!asterisk,
+      pattern: pattern ? escapeGroup(pattern) : asterisk ? '.*' : '[^' + escapeString(delimiter) + ']+?'
+    });
+  }
+
+  // Match any characters still remaining.
+  if (index < str.length) {
+    path += str.substr(index);
+  }
+
+  // If the path exists, push it onto the end.
+  if (path) {
+    tokens.push(path);
+  }
+
+  return tokens;
+}
+
+/**
+ * Compile a string to a template function for the path.
+ *
+ * @param  {string}             str
+ * @param  {Object=}            options
+ * @return {!function(Object=, Object=)}
+ */
+function compile(str, options) {
+  return tokensToFunction(parse(str, options));
+}
+
+/**
+ * Prettier encoding of URI path segments.
+ *
+ * @param  {string}
+ * @return {string}
+ */
+function encodeURIComponentPretty(str) {
+  return encodeURI(str).replace(/[\/?#]/g, function (c) {
+    return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}
+
+/**
+ * Encode the asterisk parameter. Similar to `pretty`, but allows slashes.
+ *
+ * @param  {string}
+ * @return {string}
+ */
+function encodeAsterisk(str) {
+  return encodeURI(str).replace(/[?#]/g, function (c) {
+    return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+  });
+}
+
+/**
+ * Expose a method for transforming tokens into the path function.
+ */
+function tokensToFunction(tokens) {
+  // Compile all the tokens into regexps.
+  var matches = new Array(tokens.length);
+
+  // Compile all the patterns before compilation.
+  for (var i = 0; i < tokens.length; i++) {
+    if (_typeof(tokens[i]) === 'object') {
+      matches[i] = new RegExp('^(?:' + tokens[i].pattern + ')$');
+    }
+  }
+
+  return function (obj, opts) {
+    var path = '';
+    var data = obj || {};
+    var options = opts || {};
+    var encode = options.pretty ? encodeURIComponentPretty : encodeURIComponent;
+
+    for (var i = 0; i < tokens.length; i++) {
+      var token = tokens[i];
+
+      if (typeof token === 'string') {
+        path += token;
+
+        continue;
+      }
+
+      var value = data[token.name];
+      var segment;
+
+      if (value == null) {
+        if (token.optional) {
+          // Prepend partial segment prefixes.
+          if (token.partial) {
+            path += token.prefix;
+          }
+
+          continue;
+        } else {
+          throw new TypeError('Expected "' + token.name + '" to be defined');
+        }
+      }
+
+      if (isarray(value)) {
+        if (!token.repeat) {
+          throw new TypeError('Expected "' + token.name + '" to not repeat, but received `' + JSON.stringify(value) + '`');
+        }
+
+        if (value.length === 0) {
+          if (token.optional) {
+            continue;
+          } else {
+            throw new TypeError('Expected "' + token.name + '" to not be empty');
+          }
+        }
+
+        for (var j = 0; j < value.length; j++) {
+          segment = encode(value[j]);
+
+          if (!matches[i].test(segment)) {
+            throw new TypeError('Expected all "' + token.name + '" to match "' + token.pattern + '", but received `' + JSON.stringify(segment) + '`');
+          }
+
+          path += (j === 0 ? token.prefix : token.delimiter) + segment;
+        }
+
+        continue;
+      }
+
+      segment = token.asterisk ? encodeAsterisk(value) : encode(value);
+
+      if (!matches[i].test(segment)) {
+        throw new TypeError('Expected "' + token.name + '" to match "' + token.pattern + '", but received "' + segment + '"');
+      }
+
+      path += token.prefix + segment;
+    }
+
+    return path;
+  };
+}
+
+/**
+ * Escape a regular expression string.
+ *
+ * @param  {string} str
+ * @return {string}
+ */
+function escapeString(str) {
+  return str.replace(/([.+*?=^!:${}()[\]|\/\\])/g, '\\$1');
+}
+
+/**
+ * Escape the capturing group by escaping special characters and meaning.
+ *
+ * @param  {string} group
+ * @return {string}
+ */
+function escapeGroup(group) {
+  return group.replace(/([=!:$\/()])/g, '\\$1');
+}
+
+/**
+ * Attach the keys as a property of the regexp.
+ *
+ * @param  {!RegExp} re
+ * @param  {Array}   keys
+ * @return {!RegExp}
+ */
+function attachKeys(re, keys) {
+  re.keys = keys;
+  return re;
+}
+
+/**
+ * Get the flags for a regexp from the options.
+ *
+ * @param  {Object} options
+ * @return {string}
+ */
+function flags(options) {
+  return options.sensitive ? '' : 'i';
+}
+
+/**
+ * Pull out keys from a regexp.
+ *
+ * @param  {!RegExp} path
+ * @param  {!Array}  keys
+ * @return {!RegExp}
+ */
+function regexpToRegexp(path, keys) {
+  // Use a negative lookahead to match only capturing groups.
+  var groups = path.source.match(/\((?!\?)/g);
+
+  if (groups) {
+    for (var i = 0; i < groups.length; i++) {
+      keys.push({
+        name: i,
+        prefix: null,
+        delimiter: null,
+        optional: false,
+        repeat: false,
+        partial: false,
+        asterisk: false,
+        pattern: null
+      });
+    }
+  }
+
+  return attachKeys(path, keys);
+}
+
+/**
+ * Transform an array into a regexp.
+ *
+ * @param  {!Array}  path
+ * @param  {Array}   keys
+ * @param  {!Object} options
+ * @return {!RegExp}
+ */
+function arrayToRegexp(path, keys, options) {
+  var parts = [];
+
+  for (var i = 0; i < path.length; i++) {
+    parts.push(pathToRegexp(path[i], keys, options).source);
+  }
+
+  var regexp = new RegExp('(?:' + parts.join('|') + ')', flags(options));
+
+  return attachKeys(regexp, keys);
+}
+
+/**
+ * Create a path regexp from string input.
+ *
+ * @param  {string}  path
+ * @param  {!Array}  keys
+ * @param  {!Object} options
+ * @return {!RegExp}
+ */
+function stringToRegexp(path, keys, options) {
+  return tokensToRegExp(parse(path, options), keys, options);
+}
+
+/**
+ * Expose a function for taking tokens and returning a RegExp.
+ *
+ * @param  {!Array}          tokens
+ * @param  {(Array|Object)=} keys
+ * @param  {Object=}         options
+ * @return {!RegExp}
+ */
+function tokensToRegExp(tokens, keys, options) {
+  if (!isarray(keys)) {
+    options = /** @type {!Object} */keys || options;
+    keys = [];
+  }
+
+  options = options || {};
+
+  var strict = options.strict;
+  var end = options.end !== false;
+  var route = '';
+
+  // Iterate over the tokens and create our regexp string.
+  for (var i = 0; i < tokens.length; i++) {
+    var token = tokens[i];
+
+    if (typeof token === 'string') {
+      route += escapeString(token);
+    } else {
+      var prefix = escapeString(token.prefix);
+      var capture = '(?:' + token.pattern + ')';
+
+      keys.push(token);
+
+      if (token.repeat) {
+        capture += '(?:' + prefix + capture + ')*';
+      }
+
+      if (token.optional) {
+        if (!token.partial) {
+          capture = '(?:' + prefix + '(' + capture + '))?';
+        } else {
+          capture = prefix + '(' + capture + ')?';
+        }
+      } else {
+        capture = prefix + '(' + capture + ')';
+      }
+
+      route += capture;
+    }
+  }
+
+  var delimiter = escapeString(options.delimiter || '/');
+  var endsWithDelimiter = route.slice(-delimiter.length) === delimiter;
+
+  // In non-strict mode we allow a slash at the end of match. If the path to
+  // match already ends with a slash, we remove it for consistency. The slash
+  // is valid at the end of a path match, not in the middle. This is important
+  // in non-ending mode, where "/test/" shouldn't match "/test//route".
+  if (!strict) {
+    route = (endsWithDelimiter ? route.slice(0, -delimiter.length) : route) + '(?:' + delimiter + '(?=$))?';
+  }
+
+  if (end) {
+    route += '$';
+  } else {
+    // In non-ending mode, we need the capturing groups to match as much as
+    // possible by using a positive lookahead to the end or next path segment.
+    route += strict && endsWithDelimiter ? '' : '(?=' + delimiter + '|$)';
+  }
+
+  return attachKeys(new RegExp('^' + route, flags(options)), keys);
+}
+
+/**
+ * Normalize the given path string, returning a regular expression.
+ *
+ * An empty array can be passed in for the keys, which will hold the
+ * placeholder key descriptions. For example, using `/user/:id`, `keys` will
+ * contain `[{ name: 'id', delimiter: '/', optional: false, repeat: false }]`.
+ *
+ * @param  {(string|RegExp|Array)} path
+ * @param  {(Array|Object)=}       keys
+ * @param  {Object=}               options
+ * @return {!RegExp}
+ */
+function pathToRegexp(path, keys, options) {
+  if (!isarray(keys)) {
+    options = /** @type {!Object} */keys || options;
+    keys = [];
+  }
+
+  options = options || {};
+
+  if (path instanceof RegExp) {
+    return regexpToRegexp(path, /** @type {!Array} */keys);
+  }
+
+  if (isarray(path)) {
+    return arrayToRegexp( /** @type {!Array} */path, /** @type {!Array} */keys, options);
+  }
+
+  return stringToRegexp( /** @type {string} */path, /** @type {!Array} */keys, options);
+}
+
+/***/ }),
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1101,68 +1834,26 @@ var state = function state() {
 module.exports = state;
 
 /***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var goo = __webpack_require__(1);
-
-var iocon = __webpack_require__(12);
-
-var mainPage = __webpack_require__(13);
-var homePage = __webpack_require__(14);
-
-var app = goo(document.body);
-
-iocon(app);
-
-app(homePage(app));
-
-app('/!/:roomId/', mainPage(app));
-
-window.app = app;
-
-/***/ }),
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+var goo = __webpack_require__(3);
 
-var getRoomId = function getRoomId() {
-    return window.location.pathname.replace(/^\/!\//, '').replace(/\/$/, '');
-};
+var mainPage = __webpack_require__(5);
+var homePage = __webpack_require__(4);
 
-var iocon = function iocon(app) {
-    socket.on('connect', function () {
-        return socket.emit('join', getRoomId());
-    });
+var app = goo(document.body);
 
-    socket.on('reload', function () {
-        return location.reload();
-    });
+app.setState({});
 
-    socket.on('update', function (state) {
-        return app.setState(state);
-    });
+app('/!/:roomId/', mainPage(app));
 
-    socket.on('error', function (err) {
-        return console.log(err);
-    });
+app('*', homePage(app));
 
-    app.use({ watcher: function watcher(state, type) {
-            if (type !== '__OVERRIDE__') {
-                socket.emit('update', state);
-            }
-        }
-    });
-};
-
-module.exports = iocon;
+window.app = app;
 
 /***/ }),
 /* 13 */
@@ -1171,238 +1862,17 @@ module.exports = iocon;
 "use strict";
 
 
-var Dialog = __webpack_require__(3);
-var Menu = __webpack_require__(4);
-var Task = __webpack_require__(5);
-var ContextMenu = __webpack_require__(2);
+var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
 
-var mainPage = function mainPage(app) {
-    var contextMenuAddress = [];
-    var dialog = {
-        hidden: true,
-        hint: '',
-        action: null,
-        value: ''
-    };
-
-    app.use({ action: {
-            type: 'TOGGLE_SHOW_COMPLETED',
-            target: ['showCompleted'],
-            handler: function handler(value) {
-                return !value;
-            }
-        } });
-
-    var navigate = function navigate(object, address, callback) {
-        if (address.length === 0 || object === undefined) {
-            callback(object);
-        } else {
-            var nextKey = address.shift();
-            if (nextKey !== 'children' && address.length > 0) {
-                address.unshift('children');
-            }
-            navigate(object[nextKey], address, callback);
-        }
-    };
-
-    var createTask = function createTask(description, address) {
-        return {
-            completed: false,
-            collapsed: false,
-            color: 'transparent',
-            description: description,
-            address: address,
-            children: []
-        };
-    };
-
-    app.use({ action: {
-            type: 'ADD',
-            target: ['tasks'],
-            handler: function handler(tasks, _ref) {
-                var address = _ref.address,
-                    description = _ref.description;
-
-                var addr = address.slice();
-                navigate(tasks, address.slice(), function (task) {
-                    if (!Array.isArray(task)) {
-                        task = task.children;
-                    }
-                    addr.push(task.length);
-                    task.push(createTask(description, addr));
-                });
-                return tasks;
-            }
-        } });
-
-    app.use({ action: {
-            type: 'EDIT',
-            target: ['tasks'],
-            handler: function handler(tasks, _ref2) {
-                var address = _ref2.address,
-                    key = _ref2.key,
-                    value = _ref2.value;
-
-                navigate(tasks, address, function (task) {
-                    task[key] = value;
-                });
-                return tasks;
-            }
-        } });
-
-    app.use({ action: {
-            type: 'REMOVE',
-            target: ['tasks'],
-            handler: function handler(tasks, _ref3) {
-                var address = _ref3.address;
-
-                var addr = address.slice();
-                var index = addr.pop();
-                navigate(tasks, addr, function (task) {
-                    if (!Array.isArray(task)) {
-                        task = task.children;
-                    }
-                    task.splice(index, 1);
-                });
-                return tasks;
-            }
-        } });
-
-    var undo = function undo() {
-        contextMenuAddress = [];
-        app.undo();
-    };
-
-    var redo = function redo() {
-        contextMenuAddress = [];
-        app.redo();
-    };
-
-    var hideDialog = function hideDialog() {
-        dialog = {
-            hidden: true,
-            hint: '',
-            action: null,
-            value: ''
-        };
-        app.update();
-    };
-
-    var showDialog = function showDialog(hint) {
-        var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-        var _action = arguments[2];
-
-        dialog = {
-            hidden: false,
-            hint: hint,
-            value: value,
-            action: function action(e) {
-                e.preventDefault();
-                _action(e.target[0].value);
-                hideDialog();
-            }
-        };
-        contextMenuAddress = [];
-        app.update();
-    };
-
-    var addTask = function addTask(address) {
-        showDialog('Add a task', '', function (description) {
-            app.act('ADD', { description: description, address: address });
-        });
-    };
-
-    var toggleShowCompleted = function toggleShowCompleted() {
-        app.act('TOGGLE_SHOW_COMPLETED');
-    };
-
-    var toggleCollapsed = function toggleCollapsed(address) {
-        return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
-                app.act('EDIT', {
-                    address: address,
-                    key: 'collapsed',
-                    value: !task.collapsed
-                });
-            });
-        };
-    };
-
-    var toggleContextMenu = function toggleContextMenu(address) {
-        return function () {
-            if (contextMenuAddress.toString() === address.toString()) {
-                contextMenuAddress = [];
-            } else {
-                contextMenuAddress = address.slice();
-            }
-            app.update();
-        };
-    };
-
-    var toggleComplete = function toggleComplete(address) {
-        return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
-                app.act('EDIT', {
-                    address: address,
-                    key: 'completed',
-                    value: !task.completed
-                });
-            });
-        };
-    };
-
-    var addChild = function addChild(address) {
-        return function () {
-            showDialog('Add a child task', '', function (description) {
-                app.act('ADD', { description: description, address: address });
-            });
-        };
-    };
-
-    var changeColor = function changeColor(address) {
-        return function (color) {
-            app.act('EDIT', {
-                address: address,
-                key: 'color',
-                value: color
-            });
-        };
-    };
-
-    var editTask = function editTask(address) {
-        return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
-                showDialog('Edit task', task.description, function (description) {
-                    app.act('EDIT', {
-                        address: address,
-                        key: 'description',
-                        value: description
-                    });
-                });
-            });
-        };
-    };
-
-    var remove = function remove(address) {
-        return function () {
-            app.act('REMOVE', { address: address });
-        };
-    };
-
-    var createContextMenu = function createContextMenu(address, isCompleted) {
-        return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
-    };
-
-    return function (state) {
-        return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
-            return addTask([]);
-        }, toggleShowCompleted, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
-            return [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu];
-        })]]]]];
-    };
+var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
+    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
+        return ['div.item', { onclick: function onclick() {
+                return changeColor(color.color);
+            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
+    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
 };
 
-module.exports = mainPage;
+module.exports = contextMenu;
 
 /***/ }),
 /* 14 */
@@ -1411,69 +1881,61 @@ module.exports = mainPage;
 "use strict";
 
 
-var Dialog = __webpack_require__(3);
-
-var homePage = function homePage(app) {
-    var dialog = {
-        hidden: true,
-        hint: '',
-        action: null,
-        value: ''
-    };
-
-    var generateName = function generateName() {
-        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
-        var name = [];
-        for (var i = 0; i < 16; ++i) {
-            name.push(chars[Math.floor(Math.random() * chars.length)]);
-        }
-        return name.join('');
-    };
-
-    var joinRoom = function joinRoom(name) {
-        return function () {
-            if (name.match(/^[\w-]+$/) === null) {
-                hideDialog();
-                pickName({ value: name + ' - ERR invalid character(s)' });
-                return;
-            }
-            window.location = '/!/' + name + '/';
-        };
-    };
-
-    var hideDialog = function hideDialog() {
-        dialog = {
-            hidden: true,
-            hint: '',
-            action: null,
-            value: ''
-        };
-        app.update();
-    };
-
-    var pickName = function pickName(_ref) {
-        var _ref$value = _ref.value,
-            value = _ref$value === undefined ? '' : _ref$value;
-
-        console.log('pick' + value);
-        dialog = {
-            hidden: false,
-            hint: 'ROOM NAME',
-            action: function action(e) {
-                e.preventDefault();
-                joinRoom(e.target[0].value)();
-            },
-            value: value
-        };
-        app.update();
-    };
-
-    return function () {
-        return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], ['div.home', {}, [['div.button', { onclick: joinRoom(generateName()) }, ['GENERATE RANDOM ROOM']], ['br'], 'OR', ['br'], ['div.button', { onclick: pickName }, ['PICK ROOM']]]]]];
-    };
+var menu = function menu(showCompleted, addParent, toggleShowCompleted, redirect, undo, redo) {
+    return ['div.buttons', {}, [['div.button', { onclick: function onclick() {
+            return redirect('/');
+        } }, ['HOME']], ['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
 };
 
-module.exports = homePage;
+module.exports = menu;
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
+    var completed = _ref.completed,
+        collapsed = _ref.collapsed,
+        color = _ref.color,
+        description = _ref.description,
+        address = _ref.address,
+        children = _ref.children;
+
+    var isDisplayed = completed && !showCompleted;
+    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
+    var hasChildren = !!children.length;
+    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
+    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
+    return [function () {
+        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
+            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
+            onclick: toggleCollapsed(address)
+        }, [symbol]], ['span.title | background-color:' + color + ';', {
+            onclick: toggleContextMenu(address),
+            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
+        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
+            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
+        })]]]]]]];
+    }];
+};
+
+module.exports = Task;
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var loadingPage = function loadingPage() {
+    return ['div | height: 100vh; width: 100vw; position: relative;', {}, [['div | width: 100%; text-align: center; position:absolute; top:30%;', {}, ['LOADING ...']]]];
+};
+
+module.exports = loadingPage;
 
 /***/ })
 /******/ ]);

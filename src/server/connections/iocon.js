@@ -20,7 +20,7 @@ const iocon = (server, readRoom, writeRoom) => {
                     socket.emit('error', err);
                 },
                 (state) => {
-                    socket.emit('update', state);
+                    socket.emit('join', roomId, state);
                 }
             );
         });
