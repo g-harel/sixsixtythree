@@ -1,5 +1,3 @@
-const iocon = require('./../iocon');
-
 const LoadingPage = require('./loading');
 
 const Dialog = require('./../components/dialog');
@@ -7,7 +5,7 @@ const Menu = require('./../components/menu');
 const Task = require('./../components/task');
 const ContextMenu = require('./../components/context-menu');
 
-const mainPage = (app) => {
+const mainPage = ({app, join, emitChange, joinedRoom}) => {
     let contextMenuAddress = [];
     let dialog = {
         hidden: true,
@@ -202,26 +200,12 @@ const mainPage = (app) => {
         ]
     );
 
-    let joinedRoom = false;
-
-    let {join, emitChange} = iocon({
-        onJoin: (roomId, state) => {
-            joinedRoom = true;
-            app.setState(state);
-            app.act('__RESET__');
-        },
-        onChange: (state) => {
-            app.setState(state);
-        },
-    });
-
     app.use({watcher: (state) => emitChange(state)});
 
     return ({roomId}) => {
-        joinedRoom = false;
         join(roomId);
         return (state) => {
-            if (!joinedRoom) {
+            if (!joinedRoom()) {
                 return [LoadingPage];
             }
             return (

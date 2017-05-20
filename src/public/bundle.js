@@ -63,147 +63,11 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 12);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var utils = function utils() {
-    // type checks
-    var isDefined = function isDefined(value) {
-        return value !== undefined;
-    };
-    var isNull = function isNull(value) {
-        return value === null;
-    };
-    var isArray = function isArray(value) {
-        return Array.isArray(value);
-    };
-    var isFunction = function isFunction(value) {
-        return typeof value === 'function';
-    };
-    var isString = function isString(value) {
-        return typeof value === 'string';
-    };
-    var isObject = function isObject(value) {
-        return !!value && value.constructor === Object;
-    };
-    var isNode = function isNode(value) {
-        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
-    };
-
-    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
-    var deepCopy = function deepCopy(obj) {
-        if (isArray(obj)) {
-            return obj.map(function (element) {
-                return deepCopy(element);
-            });
-        }
-        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
-            var keys = Object.keys(obj);
-            var temp = {};
-            keys.forEach(function (key) {
-                temp[key] = deepCopy(obj[key]);
-            });
-            return temp;
-        }
-        return obj;
-    };
-
-    // displays error message
-    var err = function err(message) {
-        throw new Error('gooErr:: ' + message);
-    };
-
-    // throw errors when assertion fails
-    var assert = function assert(result, message, culprit) {
-        var print = function print(obj) {
-            return JSON.stringify(obj, function (key, value) {
-                return typeof value === 'function' ? value.toString() : value;
-            }, 4);
-        };
-        if (!result) {
-            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
-        }
-    };
-
-    // wait queue (ex. async middlware during blob changes)
-    var makeQueue = function makeQueue() {
-        var queue = [];
-        var run = function run() {
-            var func = queue[0];
-            if (isDefined(func)) {
-                func();
-            }
-        };
-        var add = function add(func) {
-            assert(isFunction(func));
-            queue.push(func);
-            if (queue.length === 1) {
-                run();
-            }
-        };
-        var done = function done() {
-            queue.shift();
-            run();
-        };
-        return { add: add, done: done };
-    };
-
-    // handle common blob logic
-    var blobNames = {};
-    var blobHandler = function blobHandler(blobs) {
-        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-        var queue = arguments[2];
-
-        assert(isObject(blob), 'blob is not an object', blob);
-        if (isDefined(blob.name)) {
-            assert(isString(blob.name), 'a blob name must be a string', blob);
-            if (blobNames[blob.name] === true) {
-                return null;
-            } else {
-                blobNames[blob.name] = true;
-            }
-        }
-        return Object.keys(blob).map(function (key) {
-            var blobObject = blob[key];
-            if (!isArray(blobObject)) {
-                blobObject = [blobObject];
-            }
-            if (!isDefined(blobs[key])) {
-                return blobObject.map(function () {
-                    return null;
-                });
-            }
-            return blobObject.map(function (drop) {
-                if (isDefined(queue)) {
-                    queue.add(function () {
-                        blobs[key](drop);
-                        queue.done();
-                    });
-                    return null;
-                } else {
-                    return blobs[key](drop);
-                }
-            });
-        });
-    };
-
-    // public interface
-    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
-};
-
-module.exports = utils;
-
-/***/ }),
-/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -221,189 +85,17 @@ var dialog = function dialog(hint, defaultValue, submit, hideDialog) {
 module.exports = dialog;
 
 /***/ }),
-/* 2 */
+/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+var Dialog = __webpack_require__(0);
 
-var iocon = function iocon(_ref) {
-    var onJoin = _ref.onJoin,
-        onChange = _ref.onChange;
+var homePage = function homePage(_ref) {
+    var app = _ref.app;
 
-    socket.on('reload', function () {
-        return location.reload();
-    });
-
-    socket.on('join', function (roomId, state) {
-        return onJoin(roomId, state);
-    });
-
-    socket.on('update', function (state) {
-        return onChange(state);
-    });
-
-    socket.on('error', function (err) {
-        return console.log(err);
-    });
-
-    var join = function join(roomId) {
-        return roomId && socket.emit('join', roomId);
-    };
-
-    var emitChange = function emitChange(state) {
-        return socket.emit('update', state);
-    };
-
-    return { join: join, emitChange: emitChange };
-};
-
-module.exports = iocon;
-
-/***/ }),
-/* 3 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var dom = __webpack_require__(6);
-var state = __webpack_require__(11);
-var router = __webpack_require__(8);
-var history = __webpack_require__(7)();
-
-var _require = __webpack_require__(0)(),
-    isFunction = _require.isFunction,
-    assert = _require.assert,
-    deepCopy = _require.deepCopy;
-
-var goo = function goo(rootElement) {
-    var _window = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window;
-
-    var domHandler = dom(_window, rootElement);
-    var stateHandler = state();
-    var routeHandler = router(_window);
-
-    var _state = { __unset__: true };
-
-    // forwarding use calls
-    var use = function use(blob) {
-        return [domHandler, stateHandler, routeHandler].map(function (g) {
-            return g.use(blob);
-        });
-    };
-
-    // adding blobs
-    [history].forEach(function (b) {
-        return use(b);
-    });
-
-    // add watcher to keep track of current state
-    use({ watcher: function watcher(newState) {
-            return _state = newState;
-        }
-    });
-
-    // add watcher to update dom
-    use({ watcher: function watcher(newState) {
-            return use({ state: newState });
-        }
-    });
-
-    // add action to override state
-    use({ action: {
-            type: '__OVERRIDE__',
-            target: [],
-            handler: function handler(target, params) {
-                return params;
-            }
-        } });
-
-    var update = function update() {
-        use({ state: _state });
-    };
-
-    // adding currentState and forwarding act calls
-    var act = function act(type, params) {
-        assert(!(_state && _state.__unset__) || type === '__OVERRIDE__', 'cannot act on state before it has been set');
-        if (isFunction(type)) {
-            type();
-            update();
-            return;
-        }
-        stateHandler.act(_state, type, params);
-    };
-
-    // override state
-    var setState = function setState(replacement) {
-        act('__OVERRIDE__', isFunction(replacement) ? replacement(deepCopy(_state)) : replacement);
-    };
-
-    // register a route/controller combo
-    var register = function register(path, builder) {
-        if (isFunction(path)) {
-            builder = path();
-            use({ builder: builder });
-            return;
-        }
-        use({ route: {
-                path: path,
-                callback: function callback(params) {
-                    use({ builder: builder(params) });
-                }
-            } });
-    };
-
-    // making it easier to use undo/redo
-    var undo = function undo() {
-        act('UNDO', {});
-    };
-    var redo = function redo() {
-        act('REDO', {});
-    };
-
-    var getState = function getState() {
-        assert(!(_state && _state.__unset__), 'cannot get state before it has been set');
-        return deepCopy(_state);
-    };
-
-    return Object.assign(register, {
-        setState: setState,
-        s: setState,
-        getState: getState,
-        g: getState,
-        redirect: routeHandler.redirect,
-        r: routeHandler.redirect,
-        act: act,
-        a: act,
-        use: use,
-        update: update,
-        u: update,
-        undo: undo,
-        redo: redo
-    });
-};
-
-// making goo function available as an import or in the global window object
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = goo;
-}
-if (!!window) {
-    window.goo = goo;
-}
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var Dialog = __webpack_require__(1);
-
-var homePage = function homePage(app) {
     var dialog = {
         hidden: true,
         hint: '',
@@ -412,7 +104,7 @@ var homePage = function homePage(app) {
     };
 
     var generateName = function generateName() {
-        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         var name = [];
         for (var i = 0; i < 16; ++i) {
             name.push(chars[Math.floor(Math.random() * chars.length)]);
@@ -422,8 +114,8 @@ var homePage = function homePage(app) {
 
     var joinRoom = function joinRoom(name) {
         return function () {
+            hideDialog();
             if (name.match(/^[\w-]+$/) === null) {
-                hideDialog();
                 pickName({ value: name + ' - ERR invalid character(s)' });
                 return;
             }
@@ -441,9 +133,9 @@ var homePage = function homePage(app) {
         app.update();
     };
 
-    var pickName = function pickName(_ref) {
-        var _ref$value = _ref.value,
-            value = _ref$value === undefined ? '' : _ref$value;
+    var pickName = function pickName(_ref2) {
+        var _ref2$value = _ref2.value,
+            value = _ref2$value === undefined ? '' : _ref2$value;
 
         dialog = {
             hidden: false,
@@ -467,22 +159,25 @@ var homePage = function homePage(app) {
 module.exports = homePage;
 
 /***/ }),
-/* 5 */
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var iocon = __webpack_require__(2);
+var LoadingPage = __webpack_require__(8);
 
-var LoadingPage = __webpack_require__(16);
+var Dialog = __webpack_require__(0);
+var Menu = __webpack_require__(6);
+var Task = __webpack_require__(7);
+var ContextMenu = __webpack_require__(5);
 
-var Dialog = __webpack_require__(1);
-var Menu = __webpack_require__(14);
-var Task = __webpack_require__(15);
-var ContextMenu = __webpack_require__(13);
+var mainPage = function mainPage(_ref) {
+    var app = _ref.app,
+        join = _ref.join,
+        emitChange = _ref.emitChange,
+        joinedRoom = _ref.joinedRoom;
 
-var mainPage = function mainPage(app) {
     var contextMenuAddress = [];
     var dialog = {
         hidden: true,
@@ -525,9 +220,9 @@ var mainPage = function mainPage(app) {
     app.use({ action: {
             type: 'ADD',
             target: ['tasks'],
-            handler: function handler(tasks, _ref) {
-                var address = _ref.address,
-                    description = _ref.description;
+            handler: function handler(tasks, _ref2) {
+                var address = _ref2.address,
+                    description = _ref2.description;
 
                 var addr = address.slice();
                 navigate(tasks, address.slice(), function (task) {
@@ -544,10 +239,10 @@ var mainPage = function mainPage(app) {
     app.use({ action: {
             type: 'EDIT',
             target: ['tasks'],
-            handler: function handler(tasks, _ref2) {
-                var address = _ref2.address,
-                    key = _ref2.key,
-                    value = _ref2.value;
+            handler: function handler(tasks, _ref3) {
+                var address = _ref3.address,
+                    key = _ref3.key,
+                    value = _ref3.value;
 
                 navigate(tasks, address, function (task) {
                     task[key] = value;
@@ -559,8 +254,8 @@ var mainPage = function mainPage(app) {
     app.use({ action: {
             type: 'REMOVE',
             target: ['tasks'],
-            handler: function handler(tasks, _ref3) {
-                var address = _ref3.address;
+            handler: function handler(tasks, _ref4) {
+                var address = _ref4.address;
 
                 var addr = address.slice();
                 var index = addr.pop();
@@ -699,32 +394,16 @@ var mainPage = function mainPage(app) {
         return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
     };
 
-    var joinedRoom = false;
-
-    var _iocon = iocon({
-        onJoin: function onJoin(roomId, state) {
-            joinedRoom = true;
-            app.setState(state);
-            app.act('__RESET__');
-        },
-        onChange: function onChange(state) {
-            app.setState(state);
-        }
-    }),
-        join = _iocon.join,
-        emitChange = _iocon.emitChange;
-
     app.use({ watcher: function watcher(state) {
             return emitChange(state);
         } });
 
-    return function (_ref4) {
-        var roomId = _ref4.roomId;
+    return function (_ref5) {
+        var roomId = _ref5.roomId;
 
-        joinedRoom = false;
         join(roomId);
         return function (state) {
-            if (!joinedRoom) {
+            if (!joinedRoom()) {
                 return [LoadingPage];
             }
             return ['div', {}, [dialog.hidden ? null : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog], [Menu, state.showCompleted, function () {
@@ -739,7 +418,264 @@ var mainPage = function mainPage(app) {
 module.exports = mainPage;
 
 /***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var dom = __webpack_require__(9);
+var state = __webpack_require__(17);
+var router = __webpack_require__(13);
+var history = __webpack_require__(11)();
+
+var _require = __webpack_require__(19)(),
+    isFunction = _require.isFunction,
+    assert = _require.assert,
+    deepCopy = _require.deepCopy;
+
+var goo = function goo(rootElement) {
+    var _window = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window;
+
+    var domHandler = dom(_window, rootElement);
+    var stateHandler = state();
+    var routeHandler = router(_window);
+
+    var _state = { __unset__: true };
+
+    // forwarding use calls
+    var use = function use(blob) {
+        return [domHandler, stateHandler, routeHandler].map(function (g) {
+            return g.use(blob);
+        });
+    };
+
+    // adding blobs
+    [history].forEach(function (b) {
+        return use(b);
+    });
+
+    // add watcher to keep track of current state
+    use({ watcher: function watcher(newState) {
+            return _state = newState;
+        }
+    });
+
+    // add watcher to update dom
+    use({ watcher: function watcher(newState) {
+            return use({ state: newState });
+        }
+    });
+
+    // add action to override state
+    use({ action: {
+            type: '__OVERRIDE__',
+            target: [],
+            handler: function handler(target, params) {
+                return params;
+            }
+        } });
+
+    var update = function update() {
+        use({ state: _state });
+    };
+
+    // adding currentState and forwarding act calls
+    var act = function act(type, params) {
+        assert(!(_state && _state.__unset__) || type === '__OVERRIDE__', 'cannot act on state before it has been set');
+        if (isFunction(type)) {
+            type();
+            update();
+            return;
+        }
+        stateHandler.act(_state, type, params);
+    };
+
+    // override state
+    var setState = function setState(replacement) {
+        act('__OVERRIDE__', isFunction(replacement) ? replacement(deepCopy(_state)) : replacement);
+    };
+
+    // register a route/controller combo
+    var register = function register(path, builder) {
+        if (isFunction(path)) {
+            builder = path();
+            use({ builder: builder });
+            return;
+        }
+        use({ route: {
+                path: path,
+                callback: function callback(params) {
+                    use({ builder: builder(params) });
+                }
+            } });
+    };
+
+    // making it easier to use undo/redo
+    var undo = function undo() {
+        act('UNDO', {});
+    };
+    var redo = function redo() {
+        act('REDO', {});
+    };
+
+    var getState = function getState() {
+        assert(!(_state && _state.__unset__), 'cannot get state before it has been set');
+        return deepCopy(_state);
+    };
+
+    return Object.assign(register, {
+        setState: setState,
+        s: setState,
+        getState: getState,
+        g: getState,
+        redirect: routeHandler.redirect,
+        r: routeHandler.redirect,
+        act: act,
+        a: act,
+        use: use,
+        update: update,
+        u: update,
+        undo: undo,
+        redo: redo
+    });
+};
+
+// making goo function available as an import or in the global window object
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = goo;
+}
+if (!!window) {
+    window.goo = goo;
+}
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var goo = __webpack_require__(3);
+
+var iocon = __webpack_require__(20);
+
+var mainPage = __webpack_require__(2);
+var homePage = __webpack_require__(1);
+
+var app = goo(document.body);
+
+app.setState({});
+
+var hasJoinedRoom = false;
+
+var joinedRoom = function joinedRoom() {
+    return hasJoinedRoom;
+};
+
+var _iocon = iocon({
+    onJoin: function onJoin(roomId, state) {
+        hasJoinedRoom = true;
+        app.setState(state);
+        app.act('__RESET__');
+    },
+    onChange: function onChange(state) {
+        app.setState(state);
+    }
+}),
+    join = _iocon.join,
+    emitChange = _iocon.emitChange;
+
+app('/!/:roomId/', mainPage({ app: app, join: join, emitChange: emitChange, joinedRoom: joinedRoom }));
+
+app('*', homePage({ app: app }));
+
+window.app = app;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
+
+var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
+    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
+        return ['div.item', { onclick: function onclick() {
+                return changeColor(color.color);
+            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
+    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
+};
+
+module.exports = contextMenu;
+
+/***/ }),
 /* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var menu = function menu(showCompleted, addParent, toggleShowCompleted, redirect, undo, redo) {
+    return ['div.buttons', {}, [['div.button', { onclick: function onclick() {
+            return redirect('/');
+        } }, ['HOME']], ['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
+};
+
+module.exports = menu;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
+    var completed = _ref.completed,
+        collapsed = _ref.collapsed,
+        color = _ref.color,
+        description = _ref.description,
+        address = _ref.address,
+        children = _ref.children;
+
+    var isDisplayed = completed && !showCompleted;
+    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
+    var hasChildren = !!children.length;
+    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
+    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
+    return [function () {
+        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
+            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
+            onclick: toggleCollapsed(address)
+        }, [symbol]], ['span.title | background-color:' + color + ';', {
+            onclick: toggleContextMenu(address),
+            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
+        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
+            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
+        })]]]]]]];
+    }];
+};
+
+module.exports = Task;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var loadingPage = function loadingPage() {
+    return ['div | height: 100vh; width: 100vw; position: relative;', {}, [['div | width: 100%; text-align: center; position:absolute; top:30%;', {}, ['LOADING ...']]]];
+};
+
+module.exports = loadingPage;
+
+/***/ }),
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -751,7 +687,7 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _toArray(arr) { return Array.isArray(arr) ? arr : Array.from(arr); }
 
-var _require = __webpack_require__(0)(),
+var _require = __webpack_require__(10)(),
     assert = _require.assert,
     isDefined = _require.isDefined,
     isNull = _require.isNull,
@@ -1024,13 +960,149 @@ var dom = function dom() {
 module.exports = dom;
 
 /***/ }),
-/* 7 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _require = __webpack_require__(0)(),
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var utils = function utils() {
+    // type checks
+    var isDefined = function isDefined(value) {
+        return value !== undefined;
+    };
+    var isNull = function isNull(value) {
+        return value === null;
+    };
+    var isArray = function isArray(value) {
+        return Array.isArray(value);
+    };
+    var isFunction = function isFunction(value) {
+        return typeof value === 'function';
+    };
+    var isString = function isString(value) {
+        return typeof value === 'string';
+    };
+    var isObject = function isObject(value) {
+        return !!value && value.constructor === Object;
+    };
+    var isNode = function isNode(value) {
+        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
+    };
+
+    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
+    var deepCopy = function deepCopy(obj) {
+        if (isArray(obj)) {
+            return obj.map(function (element) {
+                return deepCopy(element);
+            });
+        }
+        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
+            var keys = Object.keys(obj);
+            var temp = {};
+            keys.forEach(function (key) {
+                temp[key] = deepCopy(obj[key]);
+            });
+            return temp;
+        }
+        return obj;
+    };
+
+    // displays error message
+    var err = function err(message) {
+        throw new Error('gooErr:: ' + message);
+    };
+
+    // throw errors when assertion fails
+    var assert = function assert(result, message, culprit) {
+        var print = function print(obj) {
+            return JSON.stringify(obj, function (key, value) {
+                return typeof value === 'function' ? value.toString() : value;
+            }, 4);
+        };
+        if (!result) {
+            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
+        }
+    };
+
+    // wait queue (ex. async middlware during blob changes)
+    var makeQueue = function makeQueue() {
+        var queue = [];
+        var run = function run() {
+            var func = queue[0];
+            if (isDefined(func)) {
+                func();
+            }
+        };
+        var add = function add(func) {
+            assert(isFunction(func));
+            queue.push(func);
+            if (queue.length === 1) {
+                run();
+            }
+        };
+        var done = function done() {
+            queue.shift();
+            run();
+        };
+        return { add: add, done: done };
+    };
+
+    // handle common blob logic
+    var blobNames = {};
+    var blobHandler = function blobHandler(blobs) {
+        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var queue = arguments[2];
+
+        assert(isObject(blob), 'blob is not an object', blob);
+        if (isDefined(blob.name)) {
+            assert(isString(blob.name), 'a blob name must be a string', blob);
+            if (blobNames[blob.name] === true) {
+                return null;
+            } else {
+                blobNames[blob.name] = true;
+            }
+        }
+        return Object.keys(blob).map(function (key) {
+            var blobObject = blob[key];
+            if (!isArray(blobObject)) {
+                blobObject = [blobObject];
+            }
+            if (!isDefined(blobs[key])) {
+                return blobObject.map(function () {
+                    return null;
+                });
+            }
+            return blobObject.map(function (drop) {
+                if (isDefined(queue)) {
+                    queue.add(function () {
+                        blobs[key](drop);
+                        queue.done();
+                    });
+                    return null;
+                } else {
+                    return blobs[key](drop);
+                }
+            });
+        });
+    };
+
+    // public interface
+    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
+};
+
+module.exports = utils;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _require = __webpack_require__(12)(),
     deepCopy = _require.deepCopy;
 
 var history = function history() {
@@ -1100,15 +1172,151 @@ var history = function history() {
 module.exports = history;
 
 /***/ }),
-/* 8 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var pathToRegexp = __webpack_require__(10);
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var _require = __webpack_require__(0)(),
+var utils = function utils() {
+    // type checks
+    var isDefined = function isDefined(value) {
+        return value !== undefined;
+    };
+    var isNull = function isNull(value) {
+        return value === null;
+    };
+    var isArray = function isArray(value) {
+        return Array.isArray(value);
+    };
+    var isFunction = function isFunction(value) {
+        return typeof value === 'function';
+    };
+    var isString = function isString(value) {
+        return typeof value === 'string';
+    };
+    var isObject = function isObject(value) {
+        return !!value && value.constructor === Object;
+    };
+    var isNode = function isNode(value) {
+        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
+    };
+
+    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
+    var deepCopy = function deepCopy(obj) {
+        if (isArray(obj)) {
+            return obj.map(function (element) {
+                return deepCopy(element);
+            });
+        }
+        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
+            var keys = Object.keys(obj);
+            var temp = {};
+            keys.forEach(function (key) {
+                temp[key] = deepCopy(obj[key]);
+            });
+            return temp;
+        }
+        return obj;
+    };
+
+    // displays error message
+    var err = function err(message) {
+        throw new Error('gooErr:: ' + message);
+    };
+
+    // throw errors when assertion fails
+    var assert = function assert(result, message, culprit) {
+        var print = function print(obj) {
+            return JSON.stringify(obj, function (key, value) {
+                return typeof value === 'function' ? value.toString() : value;
+            }, 4);
+        };
+        if (!result) {
+            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
+        }
+    };
+
+    // wait queue (ex. async middlware during blob changes)
+    var makeQueue = function makeQueue() {
+        var queue = [];
+        var run = function run() {
+            var func = queue[0];
+            if (isDefined(func)) {
+                func();
+            }
+        };
+        var add = function add(func) {
+            assert(isFunction(func));
+            queue.push(func);
+            if (queue.length === 1) {
+                run();
+            }
+        };
+        var done = function done() {
+            queue.shift();
+            run();
+        };
+        return { add: add, done: done };
+    };
+
+    // handle common blob logic
+    var blobNames = {};
+    var blobHandler = function blobHandler(blobs) {
+        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var queue = arguments[2];
+
+        assert(isObject(blob), 'blob is not an object', blob);
+        if (isDefined(blob.name)) {
+            assert(isString(blob.name), 'a blob name must be a string', blob);
+            if (blobNames[blob.name] === true) {
+                return null;
+            } else {
+                blobNames[blob.name] = true;
+            }
+        }
+        return Object.keys(blob).map(function (key) {
+            var blobObject = blob[key];
+            if (!isArray(blobObject)) {
+                blobObject = [blobObject];
+            }
+            if (!isDefined(blobs[key])) {
+                return blobObject.map(function () {
+                    return null;
+                });
+            }
+            return blobObject.map(function (drop) {
+                if (isDefined(queue)) {
+                    queue.add(function () {
+                        blobs[key](drop);
+                        queue.done();
+                    });
+                    return null;
+                } else {
+                    return blobs[key](drop);
+                }
+            });
+        });
+    };
+
+    // public interface
+    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
+};
+
+module.exports = utils;
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var pathToRegexp = __webpack_require__(16);
+
+var _require = __webpack_require__(14)(),
     assert = _require.assert,
     isString = _require.isString,
     isObject = _require.isObject,
@@ -1123,6 +1331,9 @@ var router = function router() {
 
     // store base url to prepend to all addresses
     var baseUrl = '';
+
+    // track if a path has matched on page load
+    var hasMatched = false;
 
     var isHosted = _window.document.origin !== null && _window.document.origin !== 'null';
 
@@ -1193,10 +1404,15 @@ var router = function router() {
         assert(isString(path), 'register path is not a string', path);
         assert(isFunction(callback), 'callback for path is not a function\n>>>' + path, callback);
         register(pathStore)(path, callback);
-        // chacking new path against current pathname
-        var temp = [];
-        register(temp)(path, callback);
-        fetch(temp)(currentPath, _window.history.state || {});
+        // checking new path against current pathname
+        if (!hasMatched) {
+            var temp = [];
+            register(temp)(path, callback);
+            var found = fetch(temp)(currentPath, _window.history.state || {});
+            if (found) {
+                hasMatched = true;
+            }
+        }
     };
 
     // replace the current fallback function
@@ -1248,7 +1464,143 @@ var router = function router() {
 module.exports = router;
 
 /***/ }),
-/* 9 */
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var utils = function utils() {
+    // type checks
+    var isDefined = function isDefined(value) {
+        return value !== undefined;
+    };
+    var isNull = function isNull(value) {
+        return value === null;
+    };
+    var isArray = function isArray(value) {
+        return Array.isArray(value);
+    };
+    var isFunction = function isFunction(value) {
+        return typeof value === 'function';
+    };
+    var isString = function isString(value) {
+        return typeof value === 'string';
+    };
+    var isObject = function isObject(value) {
+        return !!value && value.constructor === Object;
+    };
+    var isNode = function isNode(value) {
+        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
+    };
+
+    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
+    var deepCopy = function deepCopy(obj) {
+        if (isArray(obj)) {
+            return obj.map(function (element) {
+                return deepCopy(element);
+            });
+        }
+        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
+            var keys = Object.keys(obj);
+            var temp = {};
+            keys.forEach(function (key) {
+                temp[key] = deepCopy(obj[key]);
+            });
+            return temp;
+        }
+        return obj;
+    };
+
+    // displays error message
+    var err = function err(message) {
+        throw new Error('gooErr:: ' + message);
+    };
+
+    // throw errors when assertion fails
+    var assert = function assert(result, message, culprit) {
+        var print = function print(obj) {
+            return JSON.stringify(obj, function (key, value) {
+                return typeof value === 'function' ? value.toString() : value;
+            }, 4);
+        };
+        if (!result) {
+            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
+        }
+    };
+
+    // wait queue (ex. async middlware during blob changes)
+    var makeQueue = function makeQueue() {
+        var queue = [];
+        var run = function run() {
+            var func = queue[0];
+            if (isDefined(func)) {
+                func();
+            }
+        };
+        var add = function add(func) {
+            assert(isFunction(func));
+            queue.push(func);
+            if (queue.length === 1) {
+                run();
+            }
+        };
+        var done = function done() {
+            queue.shift();
+            run();
+        };
+        return { add: add, done: done };
+    };
+
+    // handle common blob logic
+    var blobNames = {};
+    var blobHandler = function blobHandler(blobs) {
+        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var queue = arguments[2];
+
+        assert(isObject(blob), 'blob is not an object', blob);
+        if (isDefined(blob.name)) {
+            assert(isString(blob.name), 'a blob name must be a string', blob);
+            if (blobNames[blob.name] === true) {
+                return null;
+            } else {
+                blobNames[blob.name] = true;
+            }
+        }
+        return Object.keys(blob).map(function (key) {
+            var blobObject = blob[key];
+            if (!isArray(blobObject)) {
+                blobObject = [blobObject];
+            }
+            if (!isDefined(blobs[key])) {
+                return blobObject.map(function () {
+                    return null;
+                });
+            }
+            return blobObject.map(function (drop) {
+                if (isDefined(queue)) {
+                    queue.add(function () {
+                        blobs[key](drop);
+                        queue.done();
+                    });
+                    return null;
+                } else {
+                    return blobs[key](drop);
+                }
+            });
+        });
+    };
+
+    // public interface
+    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
+};
+
+module.exports = utils;
+
+/***/ }),
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1259,7 +1611,7 @@ module.exports = Array.isArray || function (arr) {
 };
 
 /***/ }),
-/* 10 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1267,7 +1619,7 @@ module.exports = Array.isArray || function (arr) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var isarray = __webpack_require__(9);
+var isarray = __webpack_require__(15);
 
 /**
  * Expose `pathToRegexp`.
@@ -1694,13 +2046,13 @@ function pathToRegexp(path, keys, options) {
 }
 
 /***/ }),
-/* 11 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _require = __webpack_require__(0)(),
+var _require = __webpack_require__(18)(),
     assert = _require.assert,
     deepCopy = _require.deepCopy,
     makeQueue = _require.makeQueue,
@@ -1834,108 +2186,318 @@ var state = function state() {
 module.exports = state;
 
 /***/ }),
-/* 12 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var goo = __webpack_require__(3);
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var mainPage = __webpack_require__(5);
-var homePage = __webpack_require__(4);
+var utils = function utils() {
+    // type checks
+    var isDefined = function isDefined(value) {
+        return value !== undefined;
+    };
+    var isNull = function isNull(value) {
+        return value === null;
+    };
+    var isArray = function isArray(value) {
+        return Array.isArray(value);
+    };
+    var isFunction = function isFunction(value) {
+        return typeof value === 'function';
+    };
+    var isString = function isString(value) {
+        return typeof value === 'string';
+    };
+    var isObject = function isObject(value) {
+        return !!value && value.constructor === Object;
+    };
+    var isNode = function isNode(value) {
+        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
+    };
 
-var app = goo(document.body);
+    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
+    var deepCopy = function deepCopy(obj) {
+        if (isArray(obj)) {
+            return obj.map(function (element) {
+                return deepCopy(element);
+            });
+        }
+        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
+            var keys = Object.keys(obj);
+            var temp = {};
+            keys.forEach(function (key) {
+                temp[key] = deepCopy(obj[key]);
+            });
+            return temp;
+        }
+        return obj;
+    };
 
-app.setState({});
+    // displays error message
+    var err = function err(message) {
+        throw new Error('gooErr:: ' + message);
+    };
 
-app('/!/:roomId/', mainPage(app));
+    // throw errors when assertion fails
+    var assert = function assert(result, message, culprit) {
+        var print = function print(obj) {
+            return JSON.stringify(obj, function (key, value) {
+                return typeof value === 'function' ? value.toString() : value;
+            }, 4);
+        };
+        if (!result) {
+            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
+        }
+    };
 
-app('*', homePage(app));
+    // wait queue (ex. async middlware during blob changes)
+    var makeQueue = function makeQueue() {
+        var queue = [];
+        var run = function run() {
+            var func = queue[0];
+            if (isDefined(func)) {
+                func();
+            }
+        };
+        var add = function add(func) {
+            assert(isFunction(func));
+            queue.push(func);
+            if (queue.length === 1) {
+                run();
+            }
+        };
+        var done = function done() {
+            queue.shift();
+            run();
+        };
+        return { add: add, done: done };
+    };
 
-window.app = app;
+    // handle common blob logic
+    var blobNames = {};
+    var blobHandler = function blobHandler(blobs) {
+        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var queue = arguments[2];
 
-/***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
+        assert(isObject(blob), 'blob is not an object', blob);
+        if (isDefined(blob.name)) {
+            assert(isString(blob.name), 'a blob name must be a string', blob);
+            if (blobNames[blob.name] === true) {
+                return null;
+            } else {
+                blobNames[blob.name] = true;
+            }
+        }
+        return Object.keys(blob).map(function (key) {
+            var blobObject = blob[key];
+            if (!isArray(blobObject)) {
+                blobObject = [blobObject];
+            }
+            if (!isDefined(blobs[key])) {
+                return blobObject.map(function () {
+                    return null;
+                });
+            }
+            return blobObject.map(function (drop) {
+                if (isDefined(queue)) {
+                    queue.add(function () {
+                        blobs[key](drop);
+                        queue.done();
+                    });
+                    return null;
+                } else {
+                    return blobs[key](drop);
+                }
+            });
+        });
+    };
 
-"use strict";
-
-
-var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
-
-var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
-    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
-        return ['div.item', { onclick: function onclick() {
-                return changeColor(color.color);
-            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
-    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
+    // public interface
+    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
 };
 
-module.exports = contextMenu;
+module.exports = utils;
 
 /***/ }),
-/* 14 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var menu = function menu(showCompleted, addParent, toggleShowCompleted, redirect, undo, redo) {
-    return ['div.buttons', {}, [['div.button', { onclick: function onclick() {
-            return redirect('/');
-        } }, ['HOME']], ['div.button', { onclick: addParent }, ['ADD PARENT']], ['div.button', { onclick: toggleShowCompleted }, [(showCompleted ? 'HIDE' : 'SHOW') + ' COMPLETED']], ['div.button', { onclick: undo }, ['UNDO']], ['div.button', { onclick: redo }, ['REDO']]]];
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var utils = function utils() {
+    // type checks
+    var isDefined = function isDefined(value) {
+        return value !== undefined;
+    };
+    var isNull = function isNull(value) {
+        return value === null;
+    };
+    var isArray = function isArray(value) {
+        return Array.isArray(value);
+    };
+    var isFunction = function isFunction(value) {
+        return typeof value === 'function';
+    };
+    var isString = function isString(value) {
+        return typeof value === 'string';
+    };
+    var isObject = function isObject(value) {
+        return !!value && value.constructor === Object;
+    };
+    var isNode = function isNode(value) {
+        return !!(value && value.tagName && value.nodeName && value.ownerDocument && value.removeAttribute);
+    };
+
+    // creates a deep copy of an object (can only copy basic objects/arrays/primitives)
+    var deepCopy = function deepCopy(obj) {
+        if (isArray(obj)) {
+            return obj.map(function (element) {
+                return deepCopy(element);
+            });
+        }
+        if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) === 'object' && obj) {
+            var keys = Object.keys(obj);
+            var temp = {};
+            keys.forEach(function (key) {
+                temp[key] = deepCopy(obj[key]);
+            });
+            return temp;
+        }
+        return obj;
+    };
+
+    // displays error message
+    var err = function err(message) {
+        throw new Error('gooErr:: ' + message);
+    };
+
+    // throw errors when assertion fails
+    var assert = function assert(result, message, culprit) {
+        var print = function print(obj) {
+            return JSON.stringify(obj, function (key, value) {
+                return typeof value === 'function' ? value.toString() : value;
+            }, 4);
+        };
+        if (!result) {
+            err(message + (culprit ? '\n>>>' + print(culprit) : '') || 'assertion has failed');
+        }
+    };
+
+    // wait queue (ex. async middlware during blob changes)
+    var makeQueue = function makeQueue() {
+        var queue = [];
+        var run = function run() {
+            var func = queue[0];
+            if (isDefined(func)) {
+                func();
+            }
+        };
+        var add = function add(func) {
+            assert(isFunction(func));
+            queue.push(func);
+            if (queue.length === 1) {
+                run();
+            }
+        };
+        var done = function done() {
+            queue.shift();
+            run();
+        };
+        return { add: add, done: done };
+    };
+
+    // handle common blob logic
+    var blobNames = {};
+    var blobHandler = function blobHandler(blobs) {
+        var blob = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var queue = arguments[2];
+
+        assert(isObject(blob), 'blob is not an object', blob);
+        if (isDefined(blob.name)) {
+            assert(isString(blob.name), 'a blob name must be a string', blob);
+            if (blobNames[blob.name] === true) {
+                return null;
+            } else {
+                blobNames[blob.name] = true;
+            }
+        }
+        return Object.keys(blob).map(function (key) {
+            var blobObject = blob[key];
+            if (!isArray(blobObject)) {
+                blobObject = [blobObject];
+            }
+            if (!isDefined(blobs[key])) {
+                return blobObject.map(function () {
+                    return null;
+                });
+            }
+            return blobObject.map(function (drop) {
+                if (isDefined(queue)) {
+                    queue.add(function () {
+                        blobs[key](drop);
+                        queue.done();
+                    });
+                    return null;
+                } else {
+                    return blobs[key](drop);
+                }
+            });
+        });
+    };
+
+    // public interface
+    return { deepCopy: deepCopy, err: err, assert: assert, isDefined: isDefined, isNull: isNull, isArray: isArray, isFunction: isFunction, isString: isString, isObject: isObject, isNode: isNode, makeQueue: makeQueue, blobHandler: blobHandler };
 };
 
-module.exports = menu;
+module.exports = utils;
 
 /***/ }),
-/* 15 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
-    var completed = _ref.completed,
-        collapsed = _ref.collapsed,
-        color = _ref.color,
-        description = _ref.description,
-        address = _ref.address,
-        children = _ref.children;
+var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
 
-    var isDisplayed = completed && !showCompleted;
-    var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
-    var hasChildren = !!children.length;
-    var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
-    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
-    return [function () {
-        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
-            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
-            onclick: toggleCollapsed(address)
-        }, [symbol]], ['span.title | background-color:' + color + ';', {
-            onclick: toggleContextMenu(address),
-            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
-        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
-            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
-        })]]]]]]];
-    }];
+var iocon = function iocon(_ref) {
+    var onJoin = _ref.onJoin,
+        onChange = _ref.onChange;
+
+    socket.on('reload', function () {
+        return location.reload();
+    });
+
+    socket.on('join', function (roomId, state) {
+        return onJoin(roomId, state);
+    });
+
+    socket.on('update', function (state) {
+        return onChange(state);
+    });
+
+    socket.on('error', function (err) {
+        return console.log(err);
+    });
+
+    var join = function join(roomId) {
+        return roomId && socket.emit('join', roomId);
+    };
+
+    var emitChange = function emitChange(state) {
+        return socket.emit('update', state);
+    };
+
+    return { join: join, emitChange: emitChange };
 };
 
-module.exports = Task;
-
-/***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var loadingPage = function loadingPage() {
-    return ['div | height: 100vh; width: 100vw; position: relative;', {}, [['div | width: 100%; text-align: center; position:absolute; top:30%;', {}, ['LOADING ...']]]];
-};
-
-module.exports = loadingPage;
+module.exports = iocon;
 
 /***/ })
 /******/ ]);

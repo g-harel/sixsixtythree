@@ -1,6 +1,6 @@
 const Dialog = require('./../components/dialog');
 
-const homePage = (app) => {
+const homePage = ({app}) => {
     let dialog = {
         hidden: true,
         hint: '',
@@ -9,7 +9,7 @@ const homePage = (app) => {
     };
 
     const generateName = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         const name = [];
         for (let i = 0; i < 16; ++i) {
             name.push(chars[Math.floor(Math.random()*chars.length)]);
@@ -18,8 +18,8 @@ const homePage = (app) => {
     };
 
     const joinRoom = (name) => () => {
+        hideDialog();
         if (name.match(/^[\w-]+$/) === null) {
-            hideDialog();
             pickName({value: name + ' - ERR invalid character(s)'});
             return;
         }
