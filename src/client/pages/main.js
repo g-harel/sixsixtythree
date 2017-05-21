@@ -5,14 +5,8 @@ const Menu = require('./../components/menu');
 const Task = require('./../components/task');
 const ContextMenu = require('./../components/context-menu');
 
-const mainPage = ({app, join, emitChange, joinedRoom}) => {
+const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
     let contextMenuAddress = [];
-    let dialog = {
-        hidden: true,
-        hint: '',
-        action: null,
-        value: '',
-    };
 
     app.use({action: {
         type: 'TOGGLE_SHOW_COMPLETED',
@@ -94,29 +88,12 @@ const mainPage = ({app, join, emitChange, joinedRoom}) => {
         app.redo();
     };
 
-    const hideDialog = () => {
-        dialog = {
-            hidden: true,
-            hint: '',
-            action: null,
-            value: '',
-        };
-        app.update();
-    };
-
     const showDialog = (hint, value = '', action) => {
-        dialog = {
-            hidden: false,
-            hint: hint,
-            value: value,
-            action: (e) => {
-                e.preventDefault();
-                action(e.target[0].value);
-                hideDialog();
-            },
-        };
         contextMenuAddress = [];
-        app.update();
+        dialog.showDialog(hint, value, (e) => {
+            e.preventDefault();
+            action(e.target[0].value);
+        });
     };
 
     const addTask = (address) => {
@@ -210,9 +187,7 @@ const mainPage = ({app, join, emitChange, joinedRoom}) => {
             }
             return (
                 ['div', {}, [
-                    (dialog.hidden
-                        ? null
-                        : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog]),
+                    [dialog.builder],
                     [Menu, state.showCompleted, () => addTask([]), toggleShowCompleted, app.redirect, undo, redo],
                     ['div.tree-container', {}, [
                         ['ul', {},

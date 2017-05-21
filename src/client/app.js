@@ -4,6 +4,7 @@ const iocon = require('./iocon');
 
 const mainPage = require('./pages/main');
 const homePage = require('./pages/home');
+const dialogComponent = require('./components/dialog');
 
 const app = goo(document.body);
 
@@ -24,8 +25,10 @@ let {join, emitChange} = iocon({
     },
 });
 
-app('/!/:roomId/', mainPage({app, join, emitChange, joinedRoom}));
+const dialog = dialogComponent(app);
 
-app('*', homePage({app}));
+app('/!/:roomId/', mainPage({app, join, emitChange, joinedRoom, dialog}));
+
+app('*', homePage({app, dialog}));
 
 window.app = app;

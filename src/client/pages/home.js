@@ -1,13 +1,4 @@
-const Dialog = require('./../components/dialog');
-
-const homePage = ({app}) => {
-    let dialog = {
-        hidden: true,
-        hint: '',
-        action: null,
-        value: '',
-    };
-
+const homePage = ({app, dialog}) => {
     const generateName = () => {
         const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         const name = [];
@@ -18,7 +9,6 @@ const homePage = ({app}) => {
     };
 
     const joinRoom = (name) => () => {
-        hideDialog();
         if (name.match(/^[\w-]+$/) === null) {
             pickName({value: name + ' - ERR invalid character(s)'});
             return;
@@ -26,34 +16,16 @@ const homePage = ({app}) => {
         app.redirect(`/!/${name}/`);
     };
 
-    const hideDialog = () => {
-        dialog = {
-            hidden: true,
-            hint: '',
-            action: null,
-            value: '',
-        };
-        app.update();
-    };
-
     const pickName = ({value = ''}) => {
-        dialog = {
-            hidden: false,
-            hint: 'ROOM NAME',
-            action: (e) => {
-                e.preventDefault();
-                joinRoom(e.target[0].value)();
-            },
-            value: value,
-        };
-        app.update();
+        dialog.showDialog('ROOM NAME', value, (e) => {
+            e.preventDefault();
+            joinRoom(e.target[0].value)();
+        });
     };
 
     return () => () => (
         ['div', {}, [
-            (dialog.hidden
-                ? null
-                : [Dialog, dialog.hint, dialog.value, dialog.action, hideDialog]),
+            [dialog.builder],
             ['div.home', {}, [
                 ['div.button', {onclick: joinRoom(generateName())}, [
                     'GENERATE RANDOM ROOM',
