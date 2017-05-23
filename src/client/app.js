@@ -31,4 +31,6 @@ app('/!/:roomId/', mainPage({app, join, emitChange, joinedRoom, dialog}));
 
 app('*', homePage({app, dialog}));
 
+app.use({watcher: (state, type) => console.log(state, type, new Error().stack)});
+
 window.app = app;

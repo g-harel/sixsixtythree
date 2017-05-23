@@ -352,10 +352,9 @@ module.exports = homePage;
 
 var LoadingPage = __webpack_require__(10);
 
-var Dialog = __webpack_require__(1);
 var Menu = __webpack_require__(8);
 var Task = __webpack_require__(9);
-var ContextMenu = __webpack_require__(7);
+var createContextMenu = __webpack_require__(7);
 
 var mainPage = function mainPage(_ref) {
     var app = _ref.app,
@@ -363,8 +362,6 @@ var mainPage = function mainPage(_ref) {
         emitChange = _ref.emitChange,
         joinedRoom = _ref.joinedRoom,
         dialog = _ref.dialog;
-
-    var contextMenuAddress = [];
 
     app.use({ action: {
             type: 'TOGGLE_SHOW_COMPLETED',
@@ -375,15 +372,18 @@ var mainPage = function mainPage(_ref) {
         } });
 
     var navigate = function navigate(object, address, callback) {
-        if (address.length === 0 || object === undefined) {
-            callback(object);
-        } else {
-            var nextKey = address.shift();
-            if (nextKey !== 'children' && address.length > 0) {
-                address.unshift('children');
+        var _navigate = function _navigate(_object, _address, _callback) {
+            if (_address.length === 0 || _object === undefined) {
+                return _callback(_object);
+            } else {
+                var nextKey = _address.shift();
+                if (nextKey !== 'children' && _address.length > 0) {
+                    _address.unshift('children');
+                }
+                return navigate(_object[nextKey], _address, _callback);
             }
-            navigate(object[nextKey], address, callback);
-        }
+        };
+        return _navigate(object, address.slice(), callback);
     };
 
     var createTask = function createTask(description, address) {
@@ -405,7 +405,7 @@ var mainPage = function mainPage(_ref) {
                     description = _ref2.description;
 
                 var addr = address.slice();
-                navigate(tasks, address.slice(), function (task) {
+                navigate(tasks, address, function (task) {
                     if (!Array.isArray(task)) {
                         task = task.children;
                     }
@@ -437,9 +437,8 @@ var mainPage = function mainPage(_ref) {
             handler: function handler(tasks, _ref4) {
                 var address = _ref4.address;
 
-                var addr = address.slice();
                 var index = addr.pop();
-                navigate(tasks, addr, function (task) {
+                navigate(tasks, address, function (task) {
                     if (!Array.isArray(task)) {
                         task = task.children;
                     }
@@ -450,12 +449,12 @@ var mainPage = function mainPage(_ref) {
         } });
 
     var undo = function undo() {
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         app.undo();
     };
 
     var redo = function redo() {
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         app.redo();
     };
 
@@ -463,7 +462,7 @@ var mainPage = function mainPage(_ref) {
         var value = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
         var action = arguments[2];
 
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         dialog.showDialog(hint, value, function (e) {
             e.preventDefault();
             action(e.target[0].value);
@@ -480,9 +479,15 @@ var mainPage = function mainPage(_ref) {
         app.act('TOGGLE_SHOW_COMPLETED');
     };
 
+    var isCompleted = function isCompleted(address) {
+        return navigate(app.getState().tasks, address, function (task) {
+            return task.completed;
+        });
+    };
+
     var toggleCollapsed = function toggleCollapsed(address) {
         return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
+            navigate(app.getState().tasks, address, function (task) {
                 app.act('EDIT', {
                     address: address,
                     key: 'collapsed',
@@ -492,20 +497,9 @@ var mainPage = function mainPage(_ref) {
         };
     };
 
-    var toggleContextMenu = function toggleContextMenu(address) {
-        return function () {
-            if (contextMenuAddress.toString() === address.toString()) {
-                contextMenuAddress = [];
-            } else {
-                contextMenuAddress = address.slice();
-            }
-            app.update();
-        };
-    };
-
     var toggleComplete = function toggleComplete(address) {
         return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
+            navigate(app.getState().tasks, address, function (task) {
                 app.act('EDIT', {
                     address: address,
                     key: 'completed',
@@ -523,8 +517,8 @@ var mainPage = function mainPage(_ref) {
         };
     };
 
-    var changeColor = function changeColor(address) {
-        return function (color) {
+    var changeColor = function changeColor(address, color) {
+        return function () {
             app.act('EDIT', {
                 address: address,
                 key: 'color',
@@ -535,7 +529,7 @@ var mainPage = function mainPage(_ref) {
 
     var editTask = function editTask(address) {
         return function () {
-            navigate(app.getState().tasks, address.slice(), function (task) {
+            navigate(app.getState().tasks, address, function (task) {
                 showDialog('Edit task', task.description, function (description) {
                     app.act('EDIT', {
                         address: address,
@@ -553,9 +547,7 @@ var mainPage = function mainPage(_ref) {
         };
     };
 
-    var createContextMenu = function createContextMenu(address, isCompleted) {
-        return [ContextMenu, isCompleted, toggleContextMenu(address), toggleComplete(address), addChild(address), changeColor(address), editTask(address), remove(address)];
-    };
+    var ContextMenu = createContextMenu({ app: app, isCompleted: isCompleted, toggleComplete: toggleComplete, addChild: addChild, changeColor: changeColor, editTask: editTask, remove: remove });
 
     app.use({ watcher: function watcher(state) {
             return emitChange(state);
@@ -572,7 +564,7 @@ var mainPage = function mainPage(_ref) {
             return ['div', {}, [[dialog.builder], [Menu, state.showCompleted, function () {
                 return addTask([]);
             }, toggleShowCompleted, app.redirect, undo, redo], ['div.tree-container', {}, [['ul', {}, state.tasks.map(function (parentTask) {
-                return [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu];
+                return [Task, parentTask, state.showCompleted, toggleCollapsed, ContextMenu];
             })]]]]];
         };
     };
@@ -756,6 +748,10 @@ app('/!/:roomId/', mainPage({ app: app, join: join, emitChange: emitChange, join
 
 app('*', homePage({ app: app, dialog: dialog }));
 
+app.use({ watcher: function watcher(state, type) {
+        return console.log(state, type, new Error().stack);
+    } });
+
 window.app = app;
 
 /***/ }),
@@ -767,12 +763,48 @@ window.app = app;
 
 var colors = [{ name: 'NONE', color: 'transparent' }, { name: 'RED', color: '#ffcdbf' }, { name: 'YELLOW', color: '#fffac1' }, { name: 'GREEN', color: '#c7ffbf' }, { name: 'BLUE', color: '#bfffeb' }, { name: 'PURPLE', color: '#e9bfff' }];
 
-var contextMenu = function contextMenu(isCompleted, toggleMenu, toggleComplete, addChild, changeColor, edit, remove) {
-    return ['div.context-menu', { onclick: toggleMenu }, [['div.item', { onclick: toggleComplete }, [isCompleted ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
-        return ['div.item', { onclick: function onclick() {
-                return changeColor(color.color);
-            } }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
-    })]]], ['div.item', { onclick: edit }, ['EDIT']], ['div.item', { onclick: remove }, ['REMOVE']]]];
+var contextMenu = function contextMenu(_ref) {
+    var app = _ref.app,
+        isCompleted = _ref.isCompleted,
+        toggleComplete = _ref.toggleComplete,
+        addChild = _ref.addChild,
+        changeColor = _ref.changeColor,
+        edit = _ref.edit,
+        remove = _ref.remove;
+
+    var contextMenuAddress = null;
+
+    var setContextMenuAddress = function setContextMenuAddress() {
+        var address = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        contextMenuAddress = Array.isArray(address) ? address.slice() : null;
+        app.update();
+    };
+
+    var contextMenuIsActive = function contextMenuIsActive(address) {
+        return contextMenuAddress && contextMenuAddress.toString() === address.toString();
+    };
+
+    var toggleContextMenu = function toggleContextMenu(address) {
+        console.log('>>', contextMenuIsActive(address) ? null : address);
+        contextMenuIsActive(address) ? setContextMenuAddress(null) : setContextMenuAddress(address);
+    };
+
+    var builder = function builder(address) {
+        if (!contextMenuIsActive(address)) {
+            return null;
+        }
+        address = address.slice();
+        return ['div.context-menu', { onclick: toggleContextMenu.bind(null, address) }, [['div.item', { onclick: toggleComplete(address) }, [isCompleted(address) ? 'NOT DONE' : 'DONE']], ['div.item', { onclick: addChild(address) }, ['ADD']], ['div.item', {}, ['COLOR', ['div.submenu', {}, colors.map(function (color) {
+            return ['div.item', { onclick: changeColor(address, color.color) }, [['span | background-color:' + color.color + ';', {}, [color.name]]]];
+        })]]], ['div.item', { onclick: function onclick() {
+                return edit(address);
+            } }, ['EDIT']], ['div.item', { onclick: function onclick() {
+                return remove(address);
+            } }, ['REMOVE']]]];
+    };
+
+    return { builder: builder, setContextMenuAddress: setContextMenuAddress, contextMenuIsActive: contextMenuIsActive, toggleContextMenu: toggleContextMenu };
 };
 
 module.exports = contextMenu;
@@ -799,7 +831,7 @@ module.exports = menu;
 "use strict";
 
 
-var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) {
+var Task = function Task(_ref, showCompleted, toggleCollapsed, ContextMenu) {
     var completed = _ref.completed,
         collapsed = _ref.collapsed,
         color = _ref.color,
@@ -811,18 +843,20 @@ var Task = function Task(_ref, showCompleted, toggleCollapsed, toggleContextMenu
     var textColor = completed ? 'rgba(0,0,0,0.2)' : 'inherit';
     var hasChildren = !!children.length;
     var symbol = hasChildren ? collapsed ? '+ ' : '- ' : '~ ';
-    var contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
-    return [function () {
-        return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
-            style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
-            onclick: toggleCollapsed(address)
-        }, [symbol]], ['span.title | background-color:' + color + ';', {
-            onclick: toggleContextMenu(address),
-            onmouseleave: contextMenuIsActive ? toggleContextMenu(address) : null
-        }, [description, contextMenuIsActive ? [ContextMenu, address, completed] : null]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
-            return [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu];
-        })]]]]]]];
-    }];
+    address = address.slice();
+    return ['li | display:' + (isDisplayed ? 'none' : 'block') + '; color:' + textColor + ';', {}, [['span', {}, [['span.symbol', {
+        style: 'pointer-events:' + (hasChildren ? 'all' : 'none') + ';\n                            color:' + (hasChildren ? 'inherit' : 'rgba(0,0,0,0.2)') + ';',
+        onclick: toggleCollapsed(address)
+    }, [symbol]], ['span.title | background-color:' + color + ';', {
+        onclick: function onclick() {
+            return ContextMenu.toggleContextMenu(address);
+        },
+        onmouseleave: ContextMenu.contextMenuIsActive(address) ? function () {
+            return ContextMenu.toggleContextMenu(address);
+        } : null
+    }, [description, [ContextMenu.builder, address]]], ['span.children', {}, [['ul | display:' + (collapsed ? 'none' : 'block') + ';', {}, children.map(function (t) {
+        return [Task, t, showCompleted, toggleCollapsed, ContextMenu];
+    })]]]]]]];
 };
 
 module.exports = Task;

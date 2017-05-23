@@ -1,10 +1,10 @@
-const Task = ({completed, collapsed, color, description, address, children}, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu) => {
+const Task = ({completed, collapsed, color, description, address, children}, showCompleted, toggleCollapsed, ContextMenu) => {
     const isDisplayed = completed && !showCompleted;
     const textColor = completed?'rgba(0,0,0,0.2)':'inherit';
     const hasChildren = !!children.length;
     const symbol = hasChildren?collapsed?'+ ':'- ':'~ ';
-    const contextMenuIsActive = contextMenuAddress && contextMenuAddress.toString() === address.toString();
-    return [() => (
+    address = address.slice();
+    return (
         [`li | display:${isDisplayed?'none':'block'}; color:${textColor};`, {}, [
             ['span', {}, [
                 ['span.symbol', {
@@ -15,24 +15,22 @@ const Task = ({completed, collapsed, color, description, address, children}, sho
                     symbol,
                 ]],
                 [`span.title | background-color:${color};`, {
-                    onclick: toggleContextMenu(address),
-                    onmouseleave: contextMenuIsActive?toggleContextMenu(address):null,
+                    onclick: () => ContextMenu.toggleContextMenu(address),
+                    onmouseleave: ContextMenu.contextMenuIsActive(address)?() => ContextMenu.toggleContextMenu(address):null,
                 }, [
                     description,
-                    (contextMenuIsActive
-                        ? [ContextMenu, address, completed]
-                        : null),
+                    [ContextMenu.builder, address],
                 ]],
                 ['span.children', {}, [
                     [`ul | display:${collapsed?'none':'block'};`, {},
                         children.map((t) => (
-                            [Task, t, showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, ContextMenu]
+                            [Task, t, showCompleted, toggleCollapsed, ContextMenu]
                         )),
                     ],
                 ]],
             ]],
         ]]
-    )];
+    );
 };
 
 module.exports = Task;

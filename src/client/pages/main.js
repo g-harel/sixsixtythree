@@ -1,13 +1,10 @@
 const LoadingPage = require('./loading');
 
-const Dialog = require('./../components/dialog');
 const Menu = require('./../components/menu');
 const Task = require('./../components/task');
-const ContextMenu = require('./../components/context-menu');
+const createContextMenu = require('./../components/context-menu');
 
 const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
-    let contextMenuAddress = [];
-
     app.use({action: {
         type: 'TOGGLE_SHOW_COMPLETED',
         target: ['showCompleted'],
@@ -15,15 +12,18 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
     }});
 
     const navigate = (object, address, callback) => {
-        if (address.length === 0 || object === undefined) {
-            callback(object);
-        } else {
-            let nextKey = address.shift();
-            if (nextKey !== 'children' && address.length > 0) {
-                address.unshift('children');
+        const _navigate = (_object, _address, _callback) => {
+            if (_address.length === 0 || _object === undefined) {
+                return _callback(_object);
+            } else {
+                let nextKey = _address.shift();
+                if (nextKey !== 'children' && _address.length > 0) {
+                    _address.unshift('children');
+                }
+                return navigate(_object[nextKey], _address, _callback);
             }
-            navigate(object[nextKey], address, callback);
-        }
+        };
+        return _navigate(object, address.slice(), callback);
     };
 
     const createTask = (description, address) => ({
@@ -40,7 +40,7 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         target: ['tasks'],
         handler: (tasks, {address, description}) => {
             let addr = address.slice();
-            navigate(tasks, address.slice(), (task) => {
+            navigate(tasks, address, (task) => {
                 if (!Array.isArray(task)) {
                     task = task.children;
                 }
@@ -66,9 +66,8 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         type: 'REMOVE',
         target: ['tasks'],
         handler: (tasks, {address}) => {
-            let addr = address.slice();
             let index = addr.pop();
-            navigate(tasks, addr, (task) => {
+            navigate(tasks, address, (task) => {
                 if (!Array.isArray(task)) {
                     task = task.children;
                 }
@@ -79,17 +78,17 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
     }});
 
     const undo = () => {
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         app.undo();
     };
 
     const redo = () => {
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         app.redo();
     };
 
     const showDialog = (hint, value = '', action) => {
-        contextMenuAddress = [];
+        ContextMenu.setContextMenuAddress(null);
         dialog.showDialog(hint, value, (e) => {
             e.preventDefault();
             action(e.target[0].value);
@@ -106,8 +105,14 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         app.act('TOGGLE_SHOW_COMPLETED');
     };
 
+    const isCompleted = (address) => {
+        return navigate(app.getState().tasks, address, (task) => {
+            return task.completed;
+        });
+    };
+
     const toggleCollapsed = (address) => () => {
-        navigate(app.getState().tasks, address.slice(), (task) => {
+        navigate(app.getState().tasks, address, (task) => {
             app.act('EDIT', {
                 address: address,
                 key: 'collapsed',
@@ -116,17 +121,8 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         });
     };
 
-    const toggleContextMenu = (address) => () => {
-        if (contextMenuAddress.toString() === address.toString()) {
-            contextMenuAddress = [];
-        } else {
-            contextMenuAddress = address.slice();
-        }
-        app.update();
-    };
-
     const toggleComplete = (address) => () => {
-        navigate(app.getState().tasks, address.slice(), (task) => {
+        navigate(app.getState().tasks, address, (task) => {
             app.act('EDIT', {
                 address: address,
                 key: 'completed',
@@ -141,7 +137,7 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         });
     };
 
-    const changeColor = (address) => (color) => {
+    const changeColor = (address, color) => () => {
         app.act('EDIT', {
             address: address,
             key: 'color',
@@ -150,7 +146,7 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
     };
 
     const editTask = (address) => () => {
-        navigate(app.getState().tasks, address.slice(), (task) => {
+        navigate(app.getState().tasks, address, (task) => {
             showDialog('Edit task', task.description, (description) => {
                 app.act('EDIT', {
                     address: address,
@@ -165,17 +161,7 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
         app.act('REMOVE', {address});
     };
 
-    const createContextMenu = (address, isCompleted) => (
-        [ContextMenu,
-            isCompleted,
-            toggleContextMenu(address),
-            toggleComplete(address),
-            addChild(address),
-            changeColor(address),
-            editTask(address),
-            remove(address),
-        ]
-    );
+    const ContextMenu = createContextMenu({app, isCompleted, toggleComplete, addChild, changeColor, editTask, remove});
 
     app.use({watcher: (state) => emitChange(state)});
 
@@ -192,7 +178,7 @@ const mainPage = ({app, join, emitChange, joinedRoom, dialog}) => {
                     ['div.tree-container', {}, [
                         ['ul', {},
                             state.tasks.map((parentTask) => (
-                                [Task, parentTask, state.showCompleted, toggleCollapsed, toggleContextMenu, contextMenuAddress, createContextMenu]
+                                [Task, parentTask, state.showCompleted, toggleCollapsed, ContextMenu]
                             )),
                         ],
                     ]],
