@@ -1,10 +1,13 @@
 const goo = require('goo-js');
 
 const iocon = require('./iocon');
+const reloadcon = require('./reloadcon');
 
 const mainPage = require('./pages/main');
 const homePage = require('./pages/home');
 const dialogComponent = require('./components/dialog');
+
+reloadcon();
 
 const app = goo(document.body);
 

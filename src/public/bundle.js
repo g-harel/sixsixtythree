@@ -259,38 +259,66 @@ module.exports = dialog;
 "use strict";
 
 
-var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+var localKeyPrefix = '663';
 
 var iocon = function iocon(_ref) {
     var onJoin = _ref.onJoin,
-        onChange = _ref.onChange;
+        onChange = _ref.onChange,
+        onReconnect = _ref.onReconnect;
 
-    socket.on('reload', function () {
-        return location.reload();
+    var socket = window.io.connect(window.location.origin);
+
+    // if client was offline, fetch new data and call onReconnect
+    var currentRoomId = null;
+    var wasOffline = false;
+    socket.on('connect', function () {
+        if (wasOffline) {
+            socket.emit('pull', currentRoomId);
+        };
+    });
+    socket.on('push', function (roomId, state) {
+        wasOffline = false;
+        onReconnect(roomId, state, localStorage.getItem(localKeyPrefix + roomId));
     });
 
+    // joined a room
     socket.on('join', function (roomId, state) {
-        return onJoin(roomId, state);
+        currentRoomId = roomId;
+        onJoin(roomId, state);
     });
 
+    // when server has new changes
     socket.on('update', function (state) {
         return onChange(state);
+    });
+
+    // record that the client has gone offline
+    socket.on('disconnect', function () {
+        return wasOffline = true;
     });
 
     socket.on('error', function (err) {
         return console.log(err);
     });
 
+    // emit a join event
     var join = function join(roomId) {
         return roomId && socket.emit('join', roomId);
     };
 
+    // update the server with the most recent changes or fallback to localStorage
     var emitChange = function emitChange(state) {
-        return socket.emit('update', state);
+        if (socket.connected) {
+            socket.emit('update', state);
+        } else {
+            localStorage.setItem(localKeyPrefix + roomId, JSON.stringify(state));
+        }
     };
 
     return { join: join, emitChange: emitChange };
 };
+
+window.join = iocon({ onJoin: function onJoin() {}, onChange: function onChange() {} }).join;
 
 module.exports = iocon;
 
@@ -714,10 +742,13 @@ if (!!window) {
 var goo = __webpack_require__(5);
 
 var iocon = __webpack_require__(2);
+var reloadcon = __webpack_require__(17);
 
 var mainPage = __webpack_require__(4);
 var homePage = __webpack_require__(3);
 var dialogComponent = __webpack_require__(1);
+
+reloadcon();
 
 var app = goo(document.body);
 
@@ -1958,6 +1989,20 @@ var state = function state() {
 };
 
 module.exports = state;
+
+/***/ }),
+/* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = function () {
+    var socket = window.io.connect(window.location.origin, { reconnectionDelayMax: 500, reconnectionAttempts: 25 });
+    socket.on('reload', function () {
+        return location.reload();
+    });
+};
 
 /***/ })
 /******/ ]);

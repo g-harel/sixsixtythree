@@ -7,6 +7,7 @@ const iocon = (server, readRoom, writeRoom) => {
     setTimeout(() => {
         io.sockets.emit('reload');
     }, 500);
+    //
 
     io.on('connection', (socket) => {
         socket.on('join', (roomId) => {
@@ -21,6 +22,17 @@ const iocon = (server, readRoom, writeRoom) => {
                 },
                 (state) => {
                     socket.emit('join', roomId, state);
+                }
+            );
+        });
+
+        socket.on('pull', (roomId) => {
+            readRoom(roomId,
+                (err) => {
+                    socket.emit('error', err);
+                },
+                (state) => {
+                    socket.emit('push', roomId, state);
                 }
             );
         });
