@@ -1,12 +1,9 @@
 {
   "name": "663",
-  "version": "1.0.0",
-  "main": "ecms.js",
-  "repository": "https://github.com/g-harel/ECMS.git",
+  "repository": "https://github.com/g-harel/663.git",
   "license": "MIT",
   "scripts": {
     "start": "run-p start:*",
-    "start:mongo": "mongod",
     "start:server": "nodemon src/server/server.js",
     "start:client": "webpack --watch",
     "prod": "webpack -p | node src/server/server.js"
@@ -14,7 +11,12 @@
   "dependencies": {
     "body-parser": "^1.17.1",
     "express": "^4.15.2",
-    "goo-js": "^2.3.0",
+    "goo-js": "2.3.0",
+    "goo-utils": "2.0.1",
+    "goo-dom": "2.0.1",
+    "goo-state": "2.0.1",
+    "goo-router": "2.0.1",
+    "goo-history": "2.0.1",
     "mongodb": "^2.2.26",
     "socket.io": "^2.0.1"
   },

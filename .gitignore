@@ -38,4 +38,4 @@ jspm_packages
 
 yarn.lock
 
-src/public/dist/*
+src/public/bundle.js
