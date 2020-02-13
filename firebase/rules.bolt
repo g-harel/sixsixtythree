@@ -1,0 +1,6 @@
+isCurrentUser(uid) { auth != null && auth.uid == uid }
+
+path /users/{userid}/text is String {
+  read() { isCurrentUser(userid) }
+  write() { isCurrentUser(userid) }
+}

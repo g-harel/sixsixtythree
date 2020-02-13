@@ -1,4 +1,7 @@
 {
+  "database": {
+    "rules": "rules.bolt"
+  },
   "hosting": {
     "public": "public",
     "ignore": [

@@ -15,17 +15,31 @@ function handleErr(message) {
 var loginButton = findOrDie("#login");
 var logoutButton = findOrDie("#logout");
 var userContainer = findOrDie("#user");
+var textarea = findOrDie("#text");
 
 function render(user) {
     if (user) {
         loginButton.style.display = "none";
         logoutButton.style.display = "block";
         userContainer.style.display = "block";
+        textarea.style.display = "block";
+
         userContainer.innerHTML = user.displayName;
+
+        firebase.database().ref("users/" + user.uid + "/text").on("value", function(snapshot) {
+            textarea.value = snapshot.val();
+        });
+        textarea.oninput = function() {
+            firebase.database().ref("users/" + user.uid + "/text").set(textarea.value);
+        }
     } else {
         loginButton.style.display = "block";
         logoutButton.style.display = "none";
         userContainer.style.display = "none";
+        textarea.style.display = "none";
+
+        // Remove change listener.
+        textarea.outerHTML = textarea.outerHTML;
     }
 }
 
