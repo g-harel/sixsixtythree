@@ -17,6 +17,7 @@ var logoutButton = findOrDie("#logout");
 var userContainer = findOrDie("#user");
 var textarea = findOrDie("#text");
 
+var unsubscribe = function() {};
 function render(user) {
     if (user) {
         loginButton.style.display = "none";
@@ -26,11 +27,21 @@ function render(user) {
 
         userContainer.innerHTML = user.displayName;
 
-        firebase.database().ref("users/" + user.uid + "/text").on("value", function(snapshot) {
-            textarea.value = snapshot.val();
-        });
+        unsubscribe = firebase.firestore()
+            .collection("users")
+            .doc(user.uid)
+            .onSnapshot(function(doc) {
+                if (doc.data()) {
+                    textarea.value = doc.data().text;
+                }
+            });
+
         textarea.oninput = function() {
-            firebase.database().ref("users/" + user.uid + "/text").set(textarea.value);
+            firebase.firestore()
+                .collection("users")
+                .doc(user.uid)
+                .set({text: textarea.value})
+                .catch(handleErr("write data"));
         }
     } else {
         loginButton.style.display = "block";
@@ -38,7 +49,8 @@ function render(user) {
         userContainer.style.display = "none";
         textarea.style.display = "none";
 
-        // Remove change listener.
+        // Remove change listeners.
+        unsubscribe();
         textarea.outerHTML = textarea.outerHTML;
     }
 }
