@@ -6,7 +6,7 @@ export interface IData {
     text: string;
 }
 
-export const useData = (): [IData | null, (data: IData) => void] => {
+export const usePersistedData = (): [IData | null, (data: IData) => void] => {
     const [user] = useAuth();
     const [data, setData] = useState<IData | null>(null);
 

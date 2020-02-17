@@ -2,8 +2,8 @@ import React from "react";
 import {BrowserRouter as Router, Route, Switch} from "react-router-dom";
 import styled from "styled-components";
 
-import {useAuth} from "./hooks/auth";
-import {useData} from "./hooks/data";
+import {useAuth, login, logout} from "./internal/auth";
+import {usePersistedData} from "./internal/data";
 
 const AppWrapper = styled.div`
     border: 1px solid red;
@@ -17,8 +17,8 @@ const DemoWrapper = styled.div`
 `;
 
 const Demo = () => {
-    const [user, logout, login] = useAuth();
-    const [data, setData] = useData();
+    const [user] = useAuth();
+    const [data, setData] = usePersistedData();
 
     if (!user)
         return (
