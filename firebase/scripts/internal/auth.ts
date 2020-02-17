@@ -1,7 +1,7 @@
 import firebase, {UserInfo} from "firebase/app";
 import {useState, useEffect} from "react";
 
-export interface IUser extends UserInfo {}
+export interface User extends UserInfo {}
 
 export const login = () => {
     const provider = new firebase.auth.GoogleAuthProvider();
@@ -14,8 +14,8 @@ export const logout = () => {
     firebase.auth().signOut();
 };
 
-export const useAuth = (): [IUser | null] => {
-    const [user, setUser] = useState<IUser | null>(null);
+export const useAuth = (): [User | null] => {
+    const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
         // TODO handle errors.

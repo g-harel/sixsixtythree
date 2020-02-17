@@ -3,7 +3,7 @@ import {BrowserRouter as Router, Route, Switch} from "react-router-dom";
 import styled from "styled-components";
 
 import {useAuth, login, logout} from "./internal/auth";
-import {usePersistedData} from "./internal/data";
+import {useProjectData} from "./internal/projects";
 
 const AppWrapper = styled.div`
     border: 1px solid red;
@@ -18,7 +18,7 @@ const DemoWrapper = styled.div`
 
 const Demo = () => {
     const [user] = useAuth();
-    const [data, setData] = usePersistedData();
+    const [adminProjects, readerProjects] = useProjectData();
 
     if (!user)
         return (
@@ -27,15 +27,31 @@ const Demo = () => {
             </DemoWrapper>
         );
 
-    const onChange = (event: React.FormEvent) => {
-        setData({text: (event.target as HTMLTextAreaElement).value});
-    };
+    const adminIDs: Record<string, string> = {};
+    adminProjects.forEach(({id}) => (adminIDs[id] = "found"));
 
     return (
         <DemoWrapper>
             <button onClick={logout}>logout</button>
-            {user.displayName}
-            <textarea onChange={onChange} value={data?.text}></textarea>
+            <h1>{user.displayName}</h1>
+            <h2>Admin</h2>
+            <ul>
+                {adminProjects.map((project) => (
+                    <li key={project.id}>
+                        {project.title || `project${project.id}`}
+                    </li>
+                ))}
+            </ul>
+            <h2>Reader</h2>
+            <ul>
+                {readerProjects
+                    .filter(({id}) => !adminIDs[id])
+                    .map((project) => (
+                        <li key={project.id}>
+                            {project.title || `project${project.id}`}
+                        </li>
+                    ))}
+            </ul>
         </DemoWrapper>
     );
 };
