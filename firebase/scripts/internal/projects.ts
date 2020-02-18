@@ -16,22 +16,22 @@ export const useProjectData = (): [Project[], Project[]] => {
     const [admin, setAdmin] = useState<Project[]>([]);
     const [reader, setReader] = useState<Project[]>([]);
 
-    const ref = firebase.firestore().collection("projects");
-
     useEffect(() => {
         if (!user) return;
+
+        const ref = firebase.firestore().collection("projects");
 
         const genHandler = (setter: (projects: Project[]) => void) => {
             return (snapshot: firebase.firestore.QuerySnapshot) =>
                 setter(
                     snapshot.docs.map((doc) => ({
                         id: doc.id,
-                        a: console.log(doc.id),
                         ...doc.data(),
                     })),
                 );
         };
 
+        // TODO handle errors.
         const unsubscribeAdmin = ref
             .where("admins", "array-contains", user.email)
             .onSnapshot(genHandler(setAdmin));

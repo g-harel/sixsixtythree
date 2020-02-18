@@ -1,17 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
     match /databases/{database}/documents {
+        function containsEmail(emails) {
+            return request.auth.token.email in emails;
+        }
+
+        function isAdmin(project) {
+            return containsEmail(project.data.admins)
+        }
+
+        function isReader(project) {
+            return containsEmail(project.data.readers) || isAdmin(project)
+        }
+
         match /projects/{project} {
-            function isAdmin() {
-                return request.auth.token.email in resource.data.admins;
-            }
+            allow read: if isReader(resource);
+            allow write: if isAdmin(resource);
 
-            function isReader() {
-                return request.auth.token.email in resource.data.readers;
-            }
+            match /tasks/{task} {
+                function getProject() {
+                    return get(/databases/$(database)/documents/projects/$(project))
+                }
 
-            allow read: if isAdmin() || isReader();
-            allow write: if isAdmin();
+                allow read: if isReader(getProject());
+                allow write: if isAdmin(getProject());
+            }
         }
     }
 }
