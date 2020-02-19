@@ -21,7 +21,7 @@ export const useAuth = (): [User | null] => {
         // TODO handle errors.
         const unsubscribe = firebase.auth().onAuthStateChanged(setUser);
         return unsubscribe;
-    });
+    }, []);
 
     return [user];
 };

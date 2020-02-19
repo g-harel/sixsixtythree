@@ -5,17 +5,17 @@ service cloud.firestore {
             return request.auth.token.email in emails;
         }
 
-        function isAdmin(project) {
-            return containsEmail(project.data.admins)
+        function isOwner(project) {
+            return containsEmail(project.data.owners)
         }
 
         function isReader(project) {
-            return containsEmail(project.data.readers) || isAdmin(project)
+            return containsEmail(project.data.readers) || isOwner(project)
         }
 
         match /projects/{project} {
             allow read: if isReader(resource);
-            allow write: if isAdmin(resource);
+            allow write: if isOwner(resource);
 
             match /tasks/{task} {
                 function getProject() {
@@ -23,7 +23,7 @@ service cloud.firestore {
                 }
 
                 allow read: if isReader(getProject());
-                allow write: if isAdmin(getProject());
+                allow write: if isOwner(getProject());
             }
         }
     }

@@ -1,6 +1,8 @@
 import firebase from "firebase/app";
 import {useState, useEffect} from "react";
 
+import {useAuth} from "./auth";
+
 export interface Task {
     id: string;
     title?: string;
@@ -45,10 +47,14 @@ const attachBlockers = (tasks: Task[]): BlockedTask[] => {
 };
 
 export const useTaskData = (projectId?: string): [BlockedTask[]] => {
+    const [user] = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
 
     useEffect(() => {
-        if (!projectId) return;
+        if (!projectId || !user) {
+            setTasks([]);
+            return;
+        }
 
         const ref = firebase
             .firestore()
@@ -67,7 +73,7 @@ export const useTaskData = (projectId?: string): [BlockedTask[]] => {
                 ),
         );
         return unsubscribe;
-    }, []);
+    }, [user]);
 
     return [attachBlockers(tasks)];
 };

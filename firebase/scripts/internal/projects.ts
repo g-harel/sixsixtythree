@@ -7,17 +7,27 @@ export interface Project {
     id: string;
     title?: string;
     description?: string;
-    admins?: string[];
+    owners?: string[];
     readers?: string[];
 }
 
+const removeDuplicates = (from: Project[], filter: Project[]): Project[] => {
+    const foundIds: Record<string, string> = {};
+    filter.forEach(({id}) => (foundIds[id] = "found"));
+    return from.slice().filter(({id}) => !foundIds[id]);
+};
+
 export const useProjectData = (): [Project[], Project[]] => {
     const [user] = useAuth();
-    const [admin, setAdmin] = useState<Project[]>([]);
+    const [owner, setOwner] = useState<Project[]>([]);
     const [reader, setReader] = useState<Project[]>([]);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setOwner([]);
+            setReader([]);
+            return;
+        }
 
         const ref = firebase.firestore().collection("projects");
 
@@ -32,18 +42,18 @@ export const useProjectData = (): [Project[], Project[]] => {
         };
 
         // TODO handle errors.
-        const unsubscribeAdmin = ref
-            .where("admins", "array-contains", user.email)
-            .onSnapshot(genHandler(setAdmin));
+        const unsubscribeOwner = ref
+            .where("owners", "array-contains", user.email)
+            .onSnapshot(genHandler(setOwner));
         const unsubscribeReader = ref
             .where("readers", "array-contains", user.email)
             .onSnapshot(genHandler(setReader));
 
         return () => {
-            unsubscribeAdmin();
+            unsubscribeOwner();
             unsubscribeReader();
         };
     }, [user]);
 
-    return [admin, reader];
+    return [owner, removeDuplicates(reader, owner)];
 };
