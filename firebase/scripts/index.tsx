@@ -2,7 +2,6 @@ import firebase from "firebase/app";
 import "firebase/analytics";
 import "firebase/auth";
 import "firebase/firestore";
-import "normalize.css";
 import React from "react";
 import ReactDOM from "react-dom";
 
