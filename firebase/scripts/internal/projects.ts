@@ -2,6 +2,7 @@ import firebase from "firebase/app";
 import {useState, useEffect} from "react";
 
 import {useAuth} from "./auth";
+import {removeDuplicates} from "./utils";
 
 export interface Project {
     id: string;
@@ -10,12 +11,6 @@ export interface Project {
     owners?: string[];
     readers?: string[];
 }
-
-const removeDuplicates = (from: Project[], filter: Project[]): Project[] => {
-    const foundIds: Record<string, string> = {};
-    filter.forEach(({id}) => (foundIds[id] = "found"));
-    return from.slice().filter(({id}) => !foundIds[id]);
-};
 
 export const useProjectData = (): [Project[], Project[]] => {
     const [user] = useAuth();
@@ -55,5 +50,5 @@ export const useProjectData = (): [Project[], Project[]] => {
         };
     }, [user]);
 
-    return [owner, removeDuplicates(reader, owner)];
+    return [owner, removeDuplicates(reader, owner, ({id}) => id)];
 };
