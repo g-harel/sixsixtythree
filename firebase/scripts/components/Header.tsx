@@ -21,7 +21,7 @@ const AlwaysContent = styled.div`
 `;
 
 const LogoPlaceholder = styled.div`
-    background-color: #e6dcbd;
+    background-color: ${(p) => p.theme.colors.backgroundShadow};
     border-radius: 0.2rem;
     height: 2.5rem;
     margin: 1rem;
@@ -30,7 +30,7 @@ const LogoPlaceholder = styled.div`
 
 const ProfileIcon = styled.div`
     align-items: center;
-    background-color: #e6dcbd;
+    background-color: ${(p) => p.theme.colors.backgroundShadow};
     border-radius: 0.2rem;
     display: flex;
     flex-shrink: 0;
@@ -80,7 +80,7 @@ const LogoutHint = styled.div`
 `;
 
 const LogoutEmail = styled.span`
-    color: #968893;
+    color: ${(p) => p.theme.colors.cardLightText};
     font-size: 0.7rem;
     font-weight: 700;
     max-width: 100%;
@@ -102,11 +102,11 @@ const Profile = styled.div`
     width: 3.5rem;
 
     &.open {
-        background-color: #ffffff;
+        background-color: ${(p) => p.theme.colors.card};
         width: 12em;
 
         ${ProfileIcon} {
-            border: 0.05rem solid #e6dcbd;
+            border: 0.05rem solid ${(p) => p.theme.colors.backgroundShadow};
             margin: 0.45rem;
         }
 

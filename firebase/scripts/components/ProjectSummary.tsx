@@ -6,10 +6,10 @@ import {Project} from "../internal/projects";
 import {removeDuplicates} from "../internal/utils";
 
 const ProjectItem = styled(Link)`
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: ${(p) => p.theme.colors.card};
     border-radius: 0.3rem;
-    border: 1px solid #e6dcbd;
-    color: inherit;
+    border: 1px solid ${(p) => p.theme.colors.cardBorder};
+    color: ${(p) => p.theme.colors.cardText};
     display: block;
     height: 100%;
     margin-top: 2rem;
@@ -19,8 +19,8 @@ const ProjectItem = styled(Link)`
     width: 100%;
 
     &:hover {
-        background-color: #ffffff;
-        border-color: currentColor;
+        background-color: ${(p) => p.theme.colors.cardHover};
+        border-color: ${(p) => p.theme.colors.cardText};
     }
 `;
 
@@ -34,12 +34,12 @@ const ProjectDescription = styled.div`
 `;
 
 const ProjectUsers = styled.div`
-    color: #968893;
+    color: ${(p) => p.theme.colors.cardLightText};
     font-size: 0.8rem;
 `;
 
 const ProjectUsersLabel = styled.div`
-    color: #302503;
+    color: ${(p) => p.theme.colors.cardText};
     margin: 1rem 0 0.2rem;
 `;
 
