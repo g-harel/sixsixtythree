@@ -1,14 +1,14 @@
-import React, {useState} from "react";
+import React from "react";
 import styled from "styled-components";
 
-import {useAuth, login, logout} from "../internal/auth";
-
-const transitionDurationSeconds = 0.2;
+import {useAuth, login} from "../internal/auth";
+import {Link} from "react-router-dom";
 
 const HeaderWrapper = styled.div`
+    align-items: center;
     display: flex;
     flex-direction: row;
-    align-items: center;
+    padding: 2rem 2.2rem;
 `;
 
 const CustomContent = styled.div`
@@ -23,106 +23,36 @@ const AlwaysContent = styled.div`
 const LogoPlaceholder = styled.div`
     background-color: ${(p) => p.theme.colors.backgroundShadow};
     border-radius: 0.2rem;
-    height: 2.5rem;
-    margin: 1rem;
+    height: 3rem;
     width: 6rem;
 `;
 
-const ProfileIcon = styled.div`
+const ProfileIcon = styled(Link)`
     align-items: center;
-    background-color: ${(p) => p.theme.colors.backgroundShadow};
-    border-radius: 0.2rem;
+    background-color: ${(p) => p.theme.colors.card};
+    border-radius: ${(p) => p.theme.colors.cardCornerRadius};
+    border: 1px solid ${(p) => p.theme.colors.cardBorder};
+    color: ${(p) => p.theme.colors.cardText};
+    cursor: pointer;
     display: flex;
-    flex-shrink: 0;
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
     font-weight: ${(p) => p.theme.fonts.titleWeight};
-    height: 2.5rem;
+    height: 3rem;
     justify-content: center;
-    justify-self: flex-start;
-    margin: 0.5rem;
+    text-decoration: none;
     text-transform: uppercase;
     user-select: none;
-    width: 2.5rem;
+    width: 3rem;
 
     &:hover {
-        cursor: pointer;
-    }
-`;
-
-const LogoutWrapper = styled.div`
-    align-items: center;
-    border-radius: 0.2rem;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    justify-content: center;
-    margin-right: 0;
-    margin: 0.45rem;
-    min-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    padding: 0 0.5rem;
-    pointer-events: none;
-    transition: opacity ${transitionDurationSeconds / 2}s ease;
-
-    &:hover {
-        background-color: #eee;
-        cursor: pointer;
-    }
-`;
-
-const LogoutHint = styled.div`
-    color: #665863;
-    font-size: 1rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    white-space: nowrap;
-`;
-
-const LogoutEmail = styled.span`
-    color: ${(p) => p.theme.colors.cardLightText};
-    font-size: 0.7rem;
-    font-weight: 700;
-    max-width: 100%;
-    text-overflow: ellipsis;
-    overflow: hidden;
-`;
-
-const Profile = styled.div`
-    background-color: transparent;
-    border-radius: 0.3rem;
-    display: flex;
-    flex-direction: row-reverse;
-    height: 3.5rem;
-    margin: 0.5rem;
-    transition: background-color ${transitionDurationSeconds}s ease,
-        border-color ${transitionDurationSeconds}s ease,
-        width ${transitionDurationSeconds}s ease,
-        height ${transitionDurationSeconds}s ease;
-    width: 3.5rem;
-
-    &.open {
-        background-color: ${(p) => p.theme.colors.card};
-        width: 12em;
-
-        ${ProfileIcon} {
-            border: 0.05rem solid ${(p) => p.theme.colors.backgroundShadow};
-            margin: 0.45rem;
-        }
-
-        ${LogoutWrapper} {
-            opacity: 1;
-            pointer-events: all;
-            transition-delay: ${transitionDurationSeconds}s;
-            transition-duration: ${transitionDurationSeconds / 2}s;
-        }
+        background-color: ${(p) => p.theme.colors.cardHover};
+        border-color: ${(p) => p.theme.colors.cardHoverBorder};
     }
 `;
 
 export const Header: React.FunctionComponent = (props) => {
     const [user] = useAuth();
-    const [isOpen, setIsOpen] = useState(false);
 
     if (!user) {
         return (
@@ -140,11 +70,6 @@ export const Header: React.FunctionComponent = (props) => {
 
     const profileLetter = (user.email || "!")[0];
 
-    const onLogout = () => {
-        setTimeout(logout, 2 * transitionDurationSeconds * 1000);
-        setIsOpen(false);
-    };
-
     return (
         <HeaderWrapper>
             <AlwaysContent>
@@ -152,15 +77,7 @@ export const Header: React.FunctionComponent = (props) => {
             </AlwaysContent>
             <CustomContent>{props.children}</CustomContent>
             <AlwaysContent>
-                <Profile className={isOpen ? "open" : ""}>
-                    <ProfileIcon onClick={() => setIsOpen(!isOpen)}>
-                        {profileLetter}
-                    </ProfileIcon>
-                    <LogoutWrapper onClick={onLogout}>
-                        <LogoutHint>Sign Out</LogoutHint>
-                        <LogoutEmail>{user.email}</LogoutEmail>
-                    </LogoutWrapper>
-                </Profile>
+                <ProfileIcon to="/me">{profileLetter}</ProfileIcon>
             </AlwaysContent>
         </HeaderWrapper>
     );

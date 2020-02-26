@@ -4,6 +4,7 @@ import {useState, useEffect} from "react";
 import {useAuth} from "./auth";
 import {removeDuplicates} from "./utils";
 
+// TODO add isAdmin + return one list from hook.
 export interface Project {
     id: string;
     title?: string;

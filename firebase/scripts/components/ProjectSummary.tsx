@@ -24,7 +24,7 @@ const ProjectItem = styled(Link)`
     }
 `;
 
-const ProjectTitle = styled.h3`
+const ProjectTitle = styled.div`
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
     font-weight: ${(p) => p.theme.fonts.titleWeight};

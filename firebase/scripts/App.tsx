@@ -7,6 +7,7 @@ import styled, {
 } from "styled-components";
 import {Normalize} from "styled-normalize";
 
+import {Profile} from "./components/Profile";
 import {Projects} from "./components/Projects";
 import {Tasks} from "./components/Tasks";
 import {colorInterpolator} from "./internal/utils";
@@ -20,7 +21,7 @@ export const theme: DefaultTheme = {
         backgroundLightText: themeColor(0.5),
         backgroundShadow: themeColor(0.1),
         card: themeColor(0),
-        cardCornerRadius: "0.6rem",
+        cardCornerRadius: "0.4rem",
         cardHover: themeColor(0.02),
         cardHoverBorder: themeColor(0.2),
         cardBorder: themeColor(0.1),
@@ -70,6 +71,9 @@ export const App = () => (
                 <Switch>
                     <Route exact path="/">
                         <Projects />
+                    </Route>
+                    <Route exact path="/me">
+                        <Profile />
                     </Route>
                     <Route exact path="/:projectId">
                         <Tasks />
