@@ -34,8 +34,9 @@ const ProfileIcon = styled.div`
     border-radius: 0.2rem;
     display: flex;
     flex-shrink: 0;
-    font-size: 1.5rem;
-    font-weight: 900;
+    font-family: ${(p) => p.theme.fonts.titleFamily};
+    font-size: ${(p) => p.theme.fonts.titleSize};
+    font-weight: ${(p) => p.theme.fonts.titleWeight};
     height: 2.5rem;
     justify-content: center;
     justify-self: flex-start;

@@ -18,8 +18,10 @@ const ProjectColumn = styled.div`
 `;
 
 const ProjectListTitle = styled.h2`
-    font-size: 1.6rem;
-    font-weight: 900;
+    color: ${(p) => p.theme.colors.backgroundLightText};
+    font-family: ${(p) => p.theme.fonts.titleFamily};
+    font-size: ${(p) => p.theme.fonts.titleSize};
+    font-weight: ${(p) => p.theme.fonts.titleWeight};
     margin: 0;
     padding-left: 2rem;
 `;

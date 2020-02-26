@@ -7,7 +7,7 @@ import {removeDuplicates} from "../internal/utils";
 
 const ProjectItem = styled(Link)`
     background-color: ${(p) => p.theme.colors.card};
-    border-radius: 0.3rem;
+    border-radius: ${(p) => p.theme.colors.cardCornerRadius};
     border: 1px solid ${(p) => p.theme.colors.cardBorder};
     color: ${(p) => p.theme.colors.cardText};
     display: block;
@@ -20,12 +20,14 @@ const ProjectItem = styled(Link)`
 
     &:hover {
         background-color: ${(p) => p.theme.colors.cardHover};
-        border-color: ${(p) => p.theme.colors.cardText};
+        border-color: ${(p) => p.theme.colors.cardHoverBorder};
     }
 `;
 
 const ProjectTitle = styled.h3`
-    font-weight: 900;
+    font-family: ${(p) => p.theme.fonts.titleFamily};
+    font-size: ${(p) => p.theme.fonts.titleSize};
+    font-weight: ${(p) => p.theme.fonts.titleWeight};
     margin: 0 0 0.2rem;
 `;
 
@@ -35,11 +37,11 @@ const ProjectDescription = styled.div`
 
 const ProjectUsers = styled.div`
     color: ${(p) => p.theme.colors.cardLightText};
-    font-size: 0.8rem;
 `;
 
 const ProjectUsersLabel = styled.div`
     color: ${(p) => p.theme.colors.cardText};
+    font-weight: ${(p) => p.theme.fonts.mainWeightBold};
     margin: 1rem 0 0.2rem;
 `;
 
