@@ -58,7 +58,7 @@ export const Profile: React.FunctionComponent = () => {
     return (
         <Center>
             <Title>{user.displayName || "Anonymous"}</Title>
-            <Subtitle>{user.email}</Subtitle>
+            <Subtitle>{user.email || "Anonymous"}</Subtitle>
             <Button onClick={onLogout}>Logout</Button>
             {!!redirect && <Redirect to={redirect} />}
         </Center>

@@ -41,7 +41,6 @@ const ProfileIcon = styled(Link)`
     height: 3rem;
     justify-content: center;
     text-decoration: none;
-    text-transform: uppercase;
     user-select: none;
     width: 3rem;
 
@@ -52,7 +51,19 @@ const ProfileIcon = styled(Link)`
 `;
 
 export const Header: React.FunctionComponent = (props) => {
-    const [user] = useAuth();
+    const [user, authLoading] = useAuth();
+
+    if (authLoading) {
+        return (
+            <HeaderWrapper>
+                <AlwaysContent>
+                    <LogoPlaceholder />
+                </AlwaysContent>
+                <CustomContent>{props.children}</CustomContent>
+                <AlwaysContent></AlwaysContent>
+            </HeaderWrapper>
+        )
+    }
 
     if (!user) {
         return (
@@ -68,7 +79,7 @@ export const Header: React.FunctionComponent = (props) => {
         );
     }
 
-    const profileLetter = (user.email || "!")[0];
+    const profileLetter = (user.email || "!")[0].toLocaleUpperCase();
 
     return (
         <HeaderWrapper>

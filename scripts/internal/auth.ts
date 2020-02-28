@@ -14,14 +14,18 @@ export const logout = () => {
     firebase.auth().signOut();
 };
 
-export const useAuth = (): [User | null] => {
+export const useAuth = (): [User | null, boolean] => {
     const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // TODO handle errors.
-        const unsubscribe = firebase.auth().onAuthStateChanged(setUser);
+        const unsubscribe = firebase.auth().onAuthStateChanged((user) => {
+            setUser(user);
+            setLoading(false);
+        });
         return unsubscribe;
     }, []);
 
-    return [user];
+    return [user, loading];
 };
