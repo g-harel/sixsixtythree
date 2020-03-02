@@ -62,7 +62,7 @@ export const Header: React.FunctionComponent = (props) => {
                 <CustomContent>{props.children}</CustomContent>
                 <AlwaysContent></AlwaysContent>
             </HeaderWrapper>
-        )
+        );
     }
 
     if (!user) {

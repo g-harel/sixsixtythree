@@ -33,8 +33,17 @@ const ProjectList = styled.ul`
 `;
 
 export const Projects: React.FunctionComponent = () => {
-    const [user] = useAuth();
-    const [ownerProjects, readerProjects] = useProjectData();
+    const [user, authLoading] = useAuth();
+    const [projects, projectsLoading] = useProjectData();
+
+    if (authLoading || projectsLoading) {
+        return (
+            <>
+                <Header />
+                <span>loading</span>
+            </>
+        );
+    }
 
     if (!user) {
         return (
@@ -52,21 +61,25 @@ export const Projects: React.FunctionComponent = () => {
                 <ProjectColumn>
                     <ProjectListTitle>My Projects</ProjectListTitle>
                     <ProjectList>
-                        {ownerProjects.map((project) => (
-                            <li key={project.id}>
-                                <ProjectSummary {...project} />
-                            </li>
-                        ))}
+                        {projects
+                            .filter((p) => p.isOwner)
+                            .map((project) => (
+                                <li key={project.id}>
+                                    <ProjectSummary {...project} />
+                                </li>
+                            ))}
                     </ProjectList>
                 </ProjectColumn>
                 <ProjectColumn>
                     <ProjectListTitle>Shared With Me</ProjectListTitle>
                     <ProjectList>
-                        {readerProjects.map((project) => (
-                            <li key={project.id}>
-                                <ProjectSummary {...project} />
-                            </li>
-                        ))}
+                        {projects
+                            .filter((p) => !p.isOwner)
+                            .map((project) => (
+                                <li key={project.id}>
+                                    <ProjectSummary {...project} />
+                                </li>
+                            ))}
                     </ProjectList>
                 </ProjectColumn>
             </ProjectsWrapper>

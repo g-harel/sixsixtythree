@@ -4,21 +4,30 @@ import {useState, useEffect} from "react";
 import {useAuth} from "./auth";
 import {removeDuplicates} from "./utils";
 
-// TODO add isAdmin + return one list from hook.
+// TODO replace title with name
 export interface Project {
     id: string;
     title?: string;
     description?: string;
+    isOwner?: boolean;
     owners?: string[];
     readers?: string[];
 }
 
-export const useProjectData = (): [Project[], Project[]] => {
-    const [user] = useAuth();
+export const useProjectData = (): [Project[], boolean] => {
+    const [user, authLoading] = useAuth();
+    const [loading, setLoading] = useState(true);
     const [owner, setOwner] = useState<Project[]>([]);
     const [reader, setReader] = useState<Project[]>([]);
 
     useEffect(() => {
+        if (authLoading) {
+            setLoading(true);
+        }
+        if (!authLoading && !user) {
+            setLoading(false);
+        }
+
         if (!user) {
             setOwner([]);
             setReader([]);
@@ -28,13 +37,15 @@ export const useProjectData = (): [Project[], Project[]] => {
         const ref = firebase.firestore().collection("projects");
 
         const genHandler = (setter: (projects: Project[]) => void) => {
-            return (snapshot: firebase.firestore.QuerySnapshot) =>
+            return (snapshot: firebase.firestore.QuerySnapshot) => {
                 setter(
                     snapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })),
                 );
+                setLoading(false);
+            };
         };
 
         // TODO handle errors.
@@ -49,7 +60,19 @@ export const useProjectData = (): [Project[], Project[]] => {
             unsubscribeOwner();
             unsubscribeReader();
         };
-    }, [user]);
+    }, [user, authLoading]);
 
-    return [owner, removeDuplicates(reader, owner, ({id}) => id)];
+    const ownedProjects = owner.map((p) => {
+        p.isOwner = true;
+        return p;
+    });
+
+    const sharedProjects = removeDuplicates(reader, owner, ({id}) => id).map(
+        (p) => {
+            p.isOwner = false;
+            return p;
+        },
+    );
+
+    return [ownedProjects.concat(sharedProjects), loading];
 };
