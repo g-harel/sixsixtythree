@@ -80,7 +80,7 @@ export const useTaskData = (projectId?: string): [BlockedTask[], boolean] => {
                     })),
                 );
                 setLoading(false);
-            }
+            },
         );
         return unsubscribe;
     }, [user, authLoading]);

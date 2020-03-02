@@ -3,25 +3,17 @@ import {Link} from "react-router-dom";
 import styled from "styled-components";
 
 import {Project} from "../internal/projects";
+import {cardStyles} from "../internal/styles";
 import {removeDuplicates} from "../internal/utils";
 
 const ProjectItem = styled(Link)`
-    background-color: ${(p) => p.theme.colors.card};
-    border-radius: ${(p) => p.theme.colors.cardCornerRadius};
-    border: 1px solid ${(p) => p.theme.colors.cardBorder};
-    color: ${(p) => p.theme.colors.cardText};
+    ${cardStyles}
     display: block;
     height: 100%;
     margin-top: 2rem;
     padding: 2rem;
     text-decoration: none;
-    transition: background-color 0.05s ease, border-color 0.05s ease;
     width: 100%;
-
-    &:hover {
-        background-color: ${(p) => p.theme.colors.cardHover};
-        border-color: ${(p) => p.theme.colors.cardHoverBorder};
-    }
 `;
 
 const ProjectTitle = styled.div`

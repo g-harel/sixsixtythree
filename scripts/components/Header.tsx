@@ -1,8 +1,9 @@
 import React from "react";
+import {Link} from "react-router-dom";
 import styled from "styled-components";
 
 import {useAuth, login} from "../internal/auth";
-import {Link} from "react-router-dom";
+import {cardStyles} from "../internal/styles";
 
 const HeaderWrapper = styled.div`
     align-items: center;
@@ -28,12 +29,8 @@ const LogoPlaceholder = styled.div`
 `;
 
 const ProfileIcon = styled(Link)`
+    ${cardStyles}
     align-items: center;
-    background-color: ${(p) => p.theme.colors.card};
-    border-radius: ${(p) => p.theme.colors.cardCornerRadius};
-    border: 1px solid ${(p) => p.theme.colors.cardBorder};
-    color: ${(p) => p.theme.colors.cardText};
-    cursor: pointer;
     display: flex;
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
@@ -43,11 +40,6 @@ const ProfileIcon = styled(Link)`
     text-decoration: none;
     user-select: none;
     width: 3rem;
-
-    &:hover {
-        background-color: ${(p) => p.theme.colors.cardHover};
-        border-color: ${(p) => p.theme.colors.cardHoverBorder};
-    }
 `;
 
 export const Header: React.FunctionComponent = (props) => {

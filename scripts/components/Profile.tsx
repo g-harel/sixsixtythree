@@ -3,6 +3,7 @@ import {Redirect} from "react-router-dom";
 import styled from "styled-components";
 
 import {useAuth, logout} from "../internal/auth";
+import {cardStyles} from "../internal/styles";
 
 const Center = styled.div`
     align-items: center;
@@ -10,7 +11,7 @@ const Center = styled.div`
     flex-direction: column;
     height: 100%;
     justify-content: center;
-    padding: 10rem 2rem 30rem;
+    padding: 10% 2% 30%;
 `;
 
 const Title = styled.div`
@@ -24,20 +25,11 @@ const Subtitle = styled.div`
 `;
 
 const Button = styled.div`
-    background-color: ${(p) => p.theme.colors.card};
-    border-radius: ${(p) => p.theme.colors.cardCornerRadius};
-    border: 1px solid ${(p) => p.theme.colors.cardBorder};
-    color: ${(p) => p.theme.colors.cardText};
-    cursor: pointer;
+    ${cardStyles}
     font-weight: ${(p) => p.theme.fonts.mainWeightBold};
     margin-top: 2rem;
     padding: 1rem 2rem;
     user-select: none;
-
-    &:hover {
-        background-color: ${(p) => p.theme.colors.cardHover};
-        border-color: ${(p) => p.theme.colors.cardHoverBorder};
-    }
 `;
 
 export const Profile: React.FunctionComponent = () => {
