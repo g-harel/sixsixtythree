@@ -46,11 +46,19 @@ const attachBlockers = (tasks: Task[]): BlockedTask[] => {
     return rootTasks.map((taskId) => blockedTaskMap[taskId]);
 };
 
-export const useTaskData = (projectId?: string): [BlockedTask[]] => {
-    const [user] = useAuth();
+export const useTaskData = (projectId?: string): [BlockedTask[], boolean] => {
+    const [user, authLoading] = useAuth();
+    const [loading, setLoading] = useState(true);
     const [tasks, setTasks] = useState<Task[]>([]);
 
     useEffect(() => {
+        if (authLoading) {
+            setLoading(true);
+        }
+        if (!authLoading && !user) {
+            setLoading(false);
+        }
+
         if (!projectId || !user) {
             setTasks([]);
             return;
@@ -64,16 +72,18 @@ export const useTaskData = (projectId?: string): [BlockedTask[]] => {
 
         // TODO handle errors.
         const unsubscribe = ref.onSnapshot(
-            (snapshot: firebase.firestore.QuerySnapshot) =>
+            (snapshot: firebase.firestore.QuerySnapshot) => {
                 setTasks(
                     snapshot.docs.map((doc) => ({
                         id: doc.id,
                         ...doc.data(),
                     })),
-                ),
+                );
+                setLoading(false);
+            }
         );
         return unsubscribe;
-    }, [user]);
+    }, [user, authLoading]);
 
-    return [attachBlockers(tasks)];
+    return [attachBlockers(tasks), loading];
 };
