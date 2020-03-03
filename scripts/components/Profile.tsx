@@ -2,8 +2,9 @@ import React, {useState} from "react";
 import {Redirect} from "react-router-dom";
 import styled from "styled-components";
 
+import {Loader} from "./Loader";
 import {useAuth, logout} from "../internal/auth";
-import {cardStyles} from "../internal/styles";
+import {cardStyles, fadeInStyles} from "../internal/styles";
 
 const Center = styled.div`
     align-items: center;
@@ -15,17 +16,20 @@ const Center = styled.div`
 `;
 
 const Title = styled.div`
+    ${fadeInStyles()}
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
     font-weight: ${(p) => p.theme.fonts.titleWeight};
 `;
 
 const Subtitle = styled.div`
+    ${fadeInStyles(0.1)}
     color: ${(p) => p.theme.colors.backgroundLightText};
 `;
 
 const Button = styled.div`
     ${cardStyles}
+    ${fadeInStyles(0.1)}
     font-weight: ${(p) => p.theme.fonts.mainWeightBold};
     margin-top: 2rem;
     padding: 1rem 2rem;
@@ -33,7 +37,7 @@ const Button = styled.div`
 `;
 
 export const Profile: React.FunctionComponent = () => {
-    const [user] = useAuth();
+    const [user, authLoading] = useAuth();
     const [redirect, setRedirect] = useState<string | null>(null);
 
     const onLogout = () => {
@@ -43,9 +47,16 @@ export const Profile: React.FunctionComponent = () => {
         }, 200);
     };
 
-    // TODO redirect if not logged, not if no auth state yet.
-    // if (!user) return <Redirect to="/" />
-    if (!user) return null;
+    if (authLoading)
+        return (
+            <Center>
+                <Loader stack width="10rem" height="2rem" />
+                <Loader margin="0.5rem" width="14rem" height="1rem" />
+                <Loader margin="1.5rem" width="7rem" height="3rem" />
+            </Center>
+        );
+
+    if (!user) return <Redirect to="/" />;
 
     return (
         <Center>

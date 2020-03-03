@@ -19,9 +19,9 @@ export const theme: DefaultTheme = {
         background: themeColor(0),
         backgroundText: themeColor(1),
         backgroundLightText: themeColor(0.5),
-        backgroundShadow: themeColor(0.1),
+        backgroundShadow: themeColor(0.03),
+        backgroundShadowStack: themeColor(0.07),
         card: themeColor(0),
-        cardCornerRadius: "0.4rem",
         cardHover: themeColor(0.02),
         cardHoverBorder: themeColor(0.2),
         cardBorder: themeColor(0.1),
@@ -38,6 +38,9 @@ export const theme: DefaultTheme = {
             "'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
         titleSize: "1.5rem",
         titleWeight: "900",
+    },
+    layout: {
+        cardCornerRadius: "0.4rem",
     },
 };
 

@@ -3,20 +3,17 @@ import {Link} from "react-router-dom";
 import styled from "styled-components";
 
 import {Project} from "../internal/projects";
-import {cardStyles} from "../internal/styles";
+import {cardStyles, fadeInStyles} from "../internal/styles";
 import {removeDuplicates} from "../internal/utils";
 
 const ProjectItem = styled(Link)`
     ${cardStyles}
-    display: block;
-    height: 100%;
-    margin-top: 2rem;
     padding: 2rem;
     text-decoration: none;
-    width: 100%;
 `;
 
 const ProjectTitle = styled.div`
+    ${fadeInStyles()}
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
     font-weight: ${(p) => p.theme.fonts.titleWeight};
@@ -24,10 +21,12 @@ const ProjectTitle = styled.div`
 `;
 
 const ProjectDescription = styled.div`
+    ${fadeInStyles(0.2)}
     margin: 1rem 0 0;
 `;
 
 const ProjectUsers = styled.div`
+    ${fadeInStyles(0.1)}
     color: ${(p) => p.theme.colors.cardLightText};
 `;
 

@@ -3,7 +3,7 @@ import {Link} from "react-router-dom";
 import styled from "styled-components";
 
 import {useAuth, login} from "../internal/auth";
-import {cardStyles} from "../internal/styles";
+import {cardStyles, fadeInStyles} from "../internal/styles";
 
 const HeaderWrapper = styled.div`
     align-items: center;
@@ -22,7 +22,8 @@ const AlwaysContent = styled.div`
 `;
 
 const LogoPlaceholder = styled.div`
-    background-color: ${(p) => p.theme.colors.backgroundShadow};
+    ${fadeInStyles()}
+    background-color: ${(p) => p.theme.colors.backgroundShadowStack};
     border-radius: 0.2rem;
     height: 3rem;
     width: 6rem;
@@ -30,6 +31,7 @@ const LogoPlaceholder = styled.div`
 
 const ProfileIcon = styled(Link)`
     ${cardStyles}
+    ${fadeInStyles()}
     align-items: center;
     display: flex;
     font-family: ${(p) => p.theme.fonts.titleFamily};

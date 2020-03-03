@@ -7,8 +7,8 @@ declare module "styled-components" {
             backgroundText: string;
             backgroundLightText: string;
             backgroundShadow: string;
+            backgroundShadowStack: string;
             card: string;
-            cardCornerRadius: string;
             cardHover: string;
             cardHoverBorder: string;
             cardBorder: string;
@@ -23,6 +23,9 @@ declare module "styled-components" {
             titleFamily: string;
             titleSize: string;
             titleWeight: string;
+        };
+        layout: {
+            cardCornerRadius: string;
         };
     }
 }

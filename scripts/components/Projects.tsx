@@ -2,9 +2,11 @@ import React from "react";
 import styled from "styled-components";
 
 import {Header} from "./Header";
+import {Loader} from "./Loader";
+import {ProjectSummary} from "./ProjectSummary";
 import {useAuth} from "../internal/auth";
 import {useProjectData} from "../internal/projects";
-import {ProjectSummary} from "./ProjectSummary";
+import {fadeInStyles} from "../internal/styles";
 
 const ProjectsWrapper = styled.div`
     display: flex;
@@ -17,7 +19,8 @@ const ProjectColumn = styled.div`
     width: 32rem;
 `;
 
-const ProjectListTitle = styled.h2`
+const ProjectListTitle = styled.div`
+    ${fadeInStyles()}
     color: ${(p) => p.theme.colors.backgroundLightText};
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
@@ -32,6 +35,15 @@ const ProjectList = styled.ul`
     padding: 0;
 `;
 
+const ProjectListItem = styled.li`
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin-top: 2rem;
+    width: 100%;
+`;
+
 export const Projects: React.FunctionComponent = () => {
     const [user, authLoading] = useAuth();
     const [projects, projectsLoading] = useProjectData();
@@ -40,7 +52,47 @@ export const Projects: React.FunctionComponent = () => {
         return (
             <>
                 <Header />
-                <span>loading</span>
+                <ProjectsWrapper>
+                    <ProjectColumn>
+                        <ProjectListTitle>My Projects</ProjectListTitle>
+                        <ProjectList>
+                            <ProjectListItem>
+                                <Loader padding="2rem">
+                                    <Loader stack width="60%" height="2rem" />
+                                    <Loader stack margin="1rem" height="2rem" />
+                                </Loader>
+                            </ProjectListItem>
+                            <ProjectListItem>
+                                <Loader padding="2rem">
+                                    <Loader stack width="80%" height="2rem" />
+                                    <Loader stack margin="1rem" height="4rem" />
+                                    <Loader
+                                        stack
+                                        margin="1rem"
+                                        height="1.2rem"
+                                    />
+                                </Loader>
+                            </ProjectListItem>
+                            <ProjectListItem>
+                                <Loader height="7rem" />
+                            </ProjectListItem>
+                        </ProjectList>
+                    </ProjectColumn>
+                    <ProjectColumn>
+                        <ProjectListTitle>Shared With Me</ProjectListTitle>
+                        <ProjectList>
+                            <ProjectListItem>
+                                <Loader padding="2rem">
+                                    <Loader stack width="40%" height="2rem" />
+                                    <Loader stack margin="1rem" height="6rem" />
+                                </Loader>
+                            </ProjectListItem>
+                            <ProjectListItem>
+                                <Loader height="9rem" />
+                            </ProjectListItem>
+                        </ProjectList>
+                    </ProjectColumn>
+                </ProjectsWrapper>
             </>
         );
     }
@@ -64,9 +116,9 @@ export const Projects: React.FunctionComponent = () => {
                         {projects
                             .filter((p) => p.isOwner)
                             .map((project) => (
-                                <li key={project.id}>
+                                <ProjectListItem key={project.id}>
                                     <ProjectSummary {...project} />
-                                </li>
+                                </ProjectListItem>
                             ))}
                     </ProjectList>
                 </ProjectColumn>
@@ -76,9 +128,9 @@ export const Projects: React.FunctionComponent = () => {
                         {projects
                             .filter((p) => !p.isOwner)
                             .map((project) => (
-                                <li key={project.id}>
+                                <ProjectListItem key={project.id}>
                                     <ProjectSummary {...project} />
-                                </li>
+                                </ProjectListItem>
                             ))}
                     </ProjectList>
                 </ProjectColumn>
