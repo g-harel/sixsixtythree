@@ -12,7 +12,7 @@ const ProjectItem = styled(Link)`
     text-decoration: none;
 `;
 
-const ProjectTitle = styled.div`
+const ProjectName = styled.div`
     ${fadeInStyles()}
     font-family: ${(p) => p.theme.fonts.titleFamily};
     font-size: ${(p) => p.theme.fonts.titleSize};
@@ -45,9 +45,9 @@ export const ProjectSummary: React.FunctionComponent<Project> = (project) => {
 
     return (
         <ProjectItem to={`/${project.id}`}>
-            <ProjectTitle>
-                {project.title || `project-${project.id}`}
-            </ProjectTitle>
+            <ProjectName>
+                {project.name || `project-${project.id}`}
+            </ProjectName>
             <ProjectUsers>{(project.owners || []).join(", ")}</ProjectUsers>
             <ProjectDescription>{project.description}</ProjectDescription>
             {!!onlyReaders.length && (

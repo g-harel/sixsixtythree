@@ -7,7 +7,7 @@ import {removeDuplicates} from "./utils";
 // TODO replace title with name
 export interface Project {
     id: string;
-    title?: string;
+    name?: string;
     description?: string;
     isOwner?: boolean;
     owners?: string[];
