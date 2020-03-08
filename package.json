@@ -1,9 +1,9 @@
 {
     "scripts": {
         "build": "run-s build:clean build:bundle",
-        "build:bundle": "parcel build ./index.html -d .public --no-source-maps",
+        "build:bundle": "parcel build ./public/index.html -d .public --no-source-maps",
         "build:clean": "trash .public/*",
-        "dev": "parcel ./index.html -d .dist --open",
+        "dev": "parcel ./public/index.html -d .dist --open",
         "fmt": "prettier --list-different --write --ignore-path .gitignore **/*.{html,json,js,jsx,ts,tsx}"
     },
     "dependencies": {
