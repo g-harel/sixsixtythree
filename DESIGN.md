@@ -17,8 +17,11 @@
 - tasks moved around with click and drag
 - notifications for task assigning
 - batched email notifications?
+- attach files to tasks/projects
 
 # Database
+
+### Schema
 
 ```python
 type GeneratedId String
@@ -35,11 +38,11 @@ type Permissions {
 type Schema {
     groups Map<GroupId, {
         name String?
-        # Keep in sync with Schema.users.groups to avoid scanning.
+        # Sync with .users.groups to avoid scanning.
         members List<Email>
     }>
     users Map<Email, {
-        # Keep in sync with Schema.groups.members to avoid scanning.
+        # Sync with .groups.members to avoid scanning.
         groups List<GroupId>
     }>
     projects Map<ProjectId, {
@@ -57,8 +60,63 @@ type Schema {
         rootProject ProjectId
         # Tasks can only be attached to one parent.
         # Project root tasks have no parent.
-        # TODO task ordering.
         parent TaskId?
+        # Sync with .tasks.parent and .projects.parents.
+        # Should not be relied on to build tree, only for order.
+        childOrder List<{
+            # Specify only one.
+            task TaskId
+            project ProjectId
+        }>
     }>
+}
+```
+
+### Rules
+
+```js
+// firestore.rules
+
+rules_version = '2';
+
+function readEmail() {
+    return request.auth.token.email;
+}
+
+service cloud.firestore {
+    match /databases/{database}/documents {
+
+        function getProject(projectId) {
+            return get(/databases/$(database)/documents/projects/$(projectId))
+        }
+
+        function getUser(email) {
+            return get(/databases/$(database)/documents/users/$(email))
+        }
+
+        function hasPermission(permissions) {
+            return readEmail() in permissions.users ||
+                   permissions.groups.hasAny(getUser(readEmail()).data.groups)
+        }
+
+        match /groups/{group} {
+            allow read, write: if readEmail() in resource.data.members;
+        }
+
+        match /users/{email} {
+            allow read, write: if readEmail() == email;
+        }
+
+        match /projects/{project} {
+            allow read: if hasPermission(resource.data.readers);
+            allow write: if hasPermission(resource.data.editors);
+        }
+
+        match /tasks/{task} {
+            allow read: if hasPermission(getProject(resource.data.rootProject).data.readers);
+            allow write: if hasPermission(getProject(resource.data.rootProject).data.editors);
+        }
+
+    }
 }
 ```
