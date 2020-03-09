@@ -3,6 +3,7 @@
         "build": "run-s build:clean build:bundle",
         "build:bundle": "parcel build ./public/index.html -d .public --no-source-maps",
         "build:clean": "trash .public/*",
+        "deploy:functions": "firebase deploy --only functions",
         "dev": "parcel ./public/index.html -d .dist --open",
         "fmt": "prettier --list-different --write --ignore-path .gitignore **/*.{html,json,js,jsx,ts,tsx}"
     },

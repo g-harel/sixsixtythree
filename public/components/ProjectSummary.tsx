@@ -45,9 +45,7 @@ export const ProjectSummary: React.FunctionComponent<Project> = (project) => {
 
     return (
         <ProjectItem to={`/${project.id}`}>
-            <ProjectName>
-                {project.name || `project-${project.id}`}
-            </ProjectName>
+            <ProjectName>{project.name || `project-${project.id}`}</ProjectName>
             <ProjectUsers>{(project.owners || []).join(", ")}</ProjectUsers>
             <ProjectDescription>{project.description}</ProjectDescription>
             {!!onlyReaders.length && (

@@ -1,7 +1,3 @@
-# Links
-
-- https://firebase.google.com/docs/reference/rules/rules.List
-
 # Wishlist
 
 ### Data Model
@@ -40,9 +36,11 @@ type Schema {
         name String?
         # Sync with .users.groups to avoid scanning.
         members List<Email>
+        # TODO allow name to be public without exposing user list.
     }>
     users Map<Email, {
         # Sync with .groups.members to avoid scanning.
+        # TODO disallow all non-admin writes to synced field.
         groups List<GroupId>
     }>
     projects Map<ProjectId, {
@@ -120,3 +118,8 @@ service cloud.firestore {
     }
 }
 ```
+
+# Documentation
+
+- https://firebase.google.com/docs/reference/rules/rules.List
+- https://firebase.google.com/docs/functions/firestore-events
