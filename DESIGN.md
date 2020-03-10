@@ -35,6 +35,7 @@ type Schema {
     groups Map<GroupId, {
         name String?
         # Sync with .users.groups to avoid scanning.
+        # TODO Allow users to remove themselves only.
         members List<Email>
         # TODO allow name to be public without exposing user list.
     }>

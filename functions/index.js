@@ -28,28 +28,43 @@ const createIfNotExists = async (collection, documentPath, data) => {
     }
 };
 
-// Update the users' groups when they are added or removed from a group.
-exports.syncUserGroups = functions.firestore
+// Helper to maintain a one-way many-to-many relationship between source and
+// target. Updates the target(s) when source's targetIds is changed.
+const syncSourceToTarget = async ({
+    sourceId,
+    sourceBeforeTargetIds,
+    sourceAfterTargetIds,
+    targetCollection,
+    targetDefaultData,
+    targetField,
+}) => {
+    const added = findNew(sourceBeforeTargetIds, sourceAfterTargetIds);
+    for (const targetId of added) {
+        await createIfNotExists(targetCollection, targetId, targetDefaultData);
+        await targetCollection.doc(targetId).update({
+            [targetField]: admin.firestore.FieldValue.arrayUnion(sourceId),
+        });
+    }
+
+    const removed = findNew(sourceAfterTargetIds, sourceBeforeTargetIds);
+    for (const targetId of removed) {
+        await createIfNotExists(targetCollection, targetId, targetDefaultData);
+        await targetCollection.doc(targetId).update({
+            [targetField]: admin.firestore.FieldValue.arrayRemove(sourceId),
+        });
+    }
+};
+
+// Add or remove groups from users when group members are changed.
+exports.syncUserGroups_onGroupWrite = functions.firestore
     .document("groups/{groupId}")
-    .onUpdate(async (change, context) => {
-        const groupId = context.params["groupId"];
-
-        const beforeMembers = change.before.data().members;
-        const afterMembers = change.after.data().members;
-
-        const addedMembers = findNew(beforeMembers, afterMembers);
-        for (const email of addedMembers) {
-            await createIfNotExists(users, email, {});
-            await users.doc(email).update({
-                groups: admin.firestore.FieldValue.arrayUnion(groupId),
-            });
-        }
-
-        const removedMembers = findNew(afterMembers, beforeMembers);
-        for (const email of removedMembers) {
-            await createIfNotExists(users, email, {});
-            await users.doc(email).update({
-                groups: admin.firestore.FieldValue.arrayRemove(groupId),
-            });
-        }
-    });
+    .onWrite(async (change, context) =>
+        syncSourceToTarget({
+            sourceId: context.params["groupId"],
+            sourceBeforeTargetIds: (change.before.data() || {}).members || [],
+            sourceAfterTargetIds: (change.after.data() || {}).members || [],
+            targetCollection: users,
+            targetDefaultData: {},
+            targetField: "groups",
+        }),
+    );
