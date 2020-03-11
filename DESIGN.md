@@ -41,7 +41,6 @@ type Schema {
     }>
     users Map<Email, {
         # Sync with .groups.members to avoid scanning.
-        # TODO disallow all non-admin writes to synced field.
         groups List<GroupId>
     }>
     projects Map<ProjectId, {
@@ -82,6 +81,10 @@ function readEmail() {
     return request.auth.token.email;
 }
 
+function notWritingField(field) {
+    return !(field in request.resource.data);
+}
+
 service cloud.firestore {
     match /databases/{database}/documents {
 
@@ -103,7 +106,8 @@ service cloud.firestore {
         }
 
         match /users/{email} {
-            allow read, write: if readEmail() == email;
+            allow read: if readEmail() == email;
+            allow write: if readEmail() == email && notWritingField("groups");
         }
 
         match /projects/{project} {
