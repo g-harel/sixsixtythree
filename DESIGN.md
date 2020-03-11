@@ -31,17 +31,20 @@ type Permissions {
     groups List<GroupId>
 }
 
+# TODO add prefix to synced fields.
+# TODO history/audit logs
 type Schema {
     groups Map<GroupId, {
         name String?
         # Sync with .users.groups to avoid scanning.
-        # TODO Allow users to remove themselves only.
         members List<Email>
         # TODO allow name to be public without exposing user list.
+        # TODO add synced fields to keep track of project permissions.
     }>
     users Map<Email, {
         # Sync with .groups.members to avoid scanning.
         groups List<GroupId>
+        # TODO add synced fields to keep track of project permissions.
     }>
     projects Map<ProjectId, {
         # Use root task for name, description, etc.
@@ -81,33 +84,51 @@ function readEmail() {
     return request.auth.token.email;
 }
 
-function notWritingField(field) {
+function isOnlyWriting(field) {
+    return request.resource.data.keys() == [field];
+}
+
+function isNotWriting(field) {
     return !(field in request.resource.data);
+}
+
+function isRemovingItem(item, field) {
+    let before = resource.data[field];
+    let after = request.resource.data[field];
+    return (
+        // Nothing has been added.
+        after.hasOnly(before) &&
+        // Only item has been removed.
+        before.toSet().difference(after.toSet()) == [item].toSet()
+    );
 }
 
 service cloud.firestore {
     match /databases/{database}/documents {
 
         function getProject(projectId) {
-            return get(/databases/$(database)/documents/projects/$(projectId))
+            return get(/databases/$(database)/documents/projects/$(projectId));
         }
 
         function getUser(email) {
-            return get(/databases/$(database)/documents/users/$(email))
+            return get(/databases/$(database)/documents/users/$(email));
         }
 
         function hasPermission(permissions) {
-            return readEmail() in permissions.users ||
-                   permissions.groups.hasAny(getUser(readEmail()).data.groups)
+            return (
+                readEmail() in permissions.users ||
+                permissions.groups.hasAny(getUser(readEmail()).data.groups)
+            );
         }
 
         match /groups/{group} {
-            allow read, write: if readEmail() in resource.data.members;
+            allow read: if readEmail() in resource.data.members;
+            allow write: if (isOnlyWriting("users") && isRemovingItem(readEmail(), "users"));
         }
 
         match /users/{email} {
             allow read: if readEmail() == email;
-            allow write: if readEmail() == email && notWritingField("groups");
+            allow write: if readEmail() == email && isNotWriting("groups");
         }
 
         match /projects/{project} {
