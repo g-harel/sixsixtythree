@@ -1,9 +1,13 @@
 {
     "scripts": {
-        "build": "run-s build:clean build:bundle",
+        "build": "run-s build:clean build:bundle build:func",
         "build:bundle": "parcel build ./public/index.html -d .public --no-source-maps",
-        "build:clean": "trash .public/*",
-        "deploy:functions": "firebase deploy --only functions",
+        "build:clean": "trash .functions/*.* .public/*",
+        "build:func": "run-s build:func:code build:func:package build:func:install",
+        "build:func:code": "tsc -p functions",
+        "build:func:install": "npm install --prefix .functions",
+        "build:func:package": "cpy functions/package.json .functions",
+        "deploy:func": "firebase deploy --only functions",
         "dev": "parcel ./public/index.html -d .dist --open",
         "fmt": "prettier --list-different --write --ignore-path .gitignore **/*.{html,json,js,jsx,ts,tsx}"
     },
@@ -19,6 +23,7 @@
         "@types/react-dom": "^16.9.5",
         "@types/react-router-dom": "^5.1.3",
         "@types/styled-components": "^4.4.3",
+        "cpy-cli": "^3.1.0",
         "npm-run-all": "^4.1.5",
         "parcel-bundler": "^1.12.4",
         "prettier": "^1.19.1",
