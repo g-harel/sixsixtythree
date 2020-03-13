@@ -5,7 +5,6 @@ import * as functions from "firebase-functions";
 admin.initializeApp();
 
 const db = admin.firestore();
-const users = db.collection("users");
 
 // Returns an array of items that are in B, but not A.
 const findNew = (a: string[], b: string[]) => {
@@ -34,50 +33,47 @@ const createIfNotExists = async (
 };
 
 // Helper to maintain a one-way many-to-many relationship between source and
-// target. Updates the target(s) when source's targetIds is changed.
-const syncSourceToTarget = async (p: {
-    sourceId: string;
-    sourceBeforeTargetIds: string[];
-    sourceAfterTargetIds: string[];
-    targetCollection: any;
-    targetDefaultData: firebase.firestore.DocumentData;
-    targetField: string;
-}) => {
-    const added = findNew(p.sourceBeforeTargetIds, p.sourceAfterTargetIds);
-    for (const targetId of added) {
-        await createIfNotExists(
-            p.targetCollection,
-            targetId,
-            p.targetDefaultData,
-        );
-        await p.targetCollection.doc(targetId).update({
-            [p.targetField]: admin.firestore.FieldValue.arrayUnion(p.sourceId),
-        });
-    }
+// target. Updates the target(s) when source field is changed. The synced data
+// is written to a nested map using the source document and field accessible
+// using `resource.sync.{sourceDocument}.{sourceField}`.
+const sync = (opt: {
+    sourceDocument: string;
+    sourceField: string;
+    targetDocument: string;
+}) =>
+    functions.firestore
+        .document(`${opt.sourceDocument}/{sourceId}`)
+        .onWrite(async (change, context) => {
+            const sourceId = context.params["sourceId"];
+            const targetCollection = db.collection(opt.targetDocument);
 
-    const removed = findNew(p.sourceAfterTargetIds, p.sourceBeforeTargetIds);
-    for (const targetId of removed) {
-        await createIfNotExists(
-            p.targetCollection,
-            targetId,
-            p.targetDefaultData,
-        );
-        await p.targetCollection.doc(targetId).update({
-            [p.targetField]: admin.firestore.FieldValue.arrayRemove(p.sourceId),
+            const before = (change.before.data() || {})[opt.sourceField] || [];
+            const after = (change.after.data() || {})[opt.sourceField] || [];
+
+            const syncPath = `sync.${opt.sourceDocument}.${opt.sourceField}`;
+
+            const added = findNew(before, after);
+            for (const targetId of added) {
+                await createIfNotExists(targetCollection as any, targetId, {});
+                await targetCollection.doc(targetId).update({
+                    [syncPath]: admin.firestore.FieldValue.arrayUnion(sourceId),
+                });
+            }
+
+            const removed = findNew(after, before);
+            for (const targetId of removed) {
+                await createIfNotExists(targetCollection as any, targetId, {});
+                await targetCollection.doc(targetId).update({
+                    [syncPath]: admin.firestore.FieldValue.arrayRemove(
+                        sourceId,
+                    ),
+                });
+            }
         });
-    }
-};
 
 // Add or remove groups from users when group members are changed.
-export const syncUserGroups_onGroupWrite = functions.firestore
-    .document("groups/{groupId}")
-    .onWrite(async (change, context) =>
-        syncSourceToTarget({
-            sourceId: context.params["groupId"],
-            sourceBeforeTargetIds: (change.before.data() || {}).members || [],
-            sourceAfterTargetIds: (change.after.data() || {}).members || [],
-            targetCollection: users,
-            targetDefaultData: {},
-            targetField: "groups",
-        }),
-    );
+export const syncGroupMembersToUsers = sync({
+    sourceDocument: "groups",
+    sourceField: "members",
+    targetDocument: "users",
+});

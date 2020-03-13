@@ -31,7 +31,6 @@ type Permissions {
     groups List<GroupId>
 }
 
-# TODO add prefix to synced fields.
 # TODO history/audit logs
 type Schema {
     groups Map<GroupId, {
@@ -80,6 +79,16 @@ type Schema {
 
 rules_version = '2';
 
+// Global read conditions.
+function read(conditions) {
+    return conditions;
+}
+
+// Global write conditions.
+function write(conditions) {
+    return conditions && isNotWriting("sync");
+}
+
 function readEmail() {
     return request.auth.token.email;
 }
@@ -122,23 +131,23 @@ service cloud.firestore {
         }
 
         match /groups/{group} {
-            allow read: if readEmail() in resource.data.members;
-            allow write: if (isOnlyWriting("users") && isRemovingItem(readEmail(), "users"));
+            allow read: if read(readEmail() in resource.data.members);
+            allow write: if write(isOnlyWriting("users") && isRemovingItem(readEmail(), "users"));
         }
 
         match /users/{email} {
-            allow read: if readEmail() == email;
-            allow write: if readEmail() == email && isNotWriting("groups");
+            allow read: if read(readEmail() == email);
+            allow write: if write(readEmail() == email && isNotWriting("groups"));
         }
 
         match /projects/{project} {
-            allow read: if hasPermission(resource.data.readers);
-            allow write: if hasPermission(resource.data.editors);
+            allow read: if read(hasPermission(resource.data.readers));
+            allow write: if write(hasPermission(resource.data.editors));
         }
 
         match /tasks/{task} {
-            allow read: if hasPermission(getProject(resource.data.rootProject).data.readers);
-            allow write: if hasPermission(getProject(resource.data.rootProject).data.editors);
+            allow read: if read(hasPermission(getProject(resource.data.rootProject).data.readers));
+            allow write: if write(hasPermission(getProject(resource.data.rootProject).data.editors));
         }
 
     }
