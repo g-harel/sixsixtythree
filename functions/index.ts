@@ -38,7 +38,7 @@ const createIfNotExists = async (
 // using `resource.sync.{sourceDocument}.{sourceField}`.
 const sync = (opt: {
     sourceDocument: string;
-    sourceField: string;
+    sourceField: string[];
     targetDocument: string;
 }) =>
     functions.firestore
@@ -47,10 +47,30 @@ const sync = (opt: {
             const sourceId = context.params["sourceId"];
             const targetCollection = db.collection(opt.targetDocument);
 
-            const before = (change.before.data() || {})[opt.sourceField] || [];
-            const after = (change.after.data() || {})[opt.sourceField] || [];
+            let before: any = change.before.data() || {};
+            for (const sourceFieldPart of opt.sourceField) {
+                if (!before) break;
+                before = before[sourceFieldPart];
+            }
+            if (!Array.isArray(before)) {
+                before = [];
+            }
 
-            const syncPath = `sync.${opt.sourceDocument}.${opt.sourceField}`;
+            let after: any = change.after.data() || {};
+            for (const sourceFieldPart of opt.sourceField) {
+                if (!after) break;
+                after = after[sourceFieldPart];
+            }
+            if (!Array.isArray(after)) {
+                after = [];
+            }
+
+            let syncPath = `sync.${opt.sourceDocument}`;
+            for (const sourceFieldPart of opt.sourceField) {
+                syncPath += `.${sourceFieldPart}`;
+            }
+
+            console.log(before, after, syncPath);
 
             const added = findNew(before, after);
             for (const targetId of added) {
@@ -74,6 +94,6 @@ const sync = (opt: {
 // Add or remove groups from users when group members are changed.
 export const syncGroupMembersToUsers = sync({
     sourceDocument: "groups",
-    sourceField: "members",
+    sourceField: ["members"],
     targetDocument: "users",
 });
