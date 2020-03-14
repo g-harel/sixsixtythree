@@ -3,8 +3,9 @@ import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
 admin.initializeApp();
-
 const db = admin.firestore();
+
+type Field = string[];
 
 // Returns an array of items that are in B, but not A.
 const findNew = (a: string[], b: string[]) => {
@@ -32,61 +33,83 @@ const createIfNotExists = async (
     }
 };
 
+// Reads nested fields from the document data.
+const fieldData = (field: Field, doc?: firebase.firestore.DocumentData) => {
+    let result: any = doc || {};
+    for (const sourceFieldPart of field) {
+        if (!result) break;
+        result = result[sourceFieldPart];
+    }
+    if (!Array.isArray(result)) {
+        result = [];
+    }
+    return result;
+};
+
+// Updates a list field in the target document
+const update = (type: "arrayUnion" | "arrayRemove") => async (opt: {
+    collection: string;
+    id: string;
+    field: Field;
+    items: any[];
+}) => {
+    const collection = db.collection(opt.collection);
+    const syncPath = `sync.${opt.field.join(".")}`;
+    await createIfNotExists(collection as any, opt.id, {});
+    await collection.doc(opt.id).update({
+        [syncPath]: admin.firestore.FieldValue[type](...opt.items),
+    });
+};
+
 // Helper to maintain a one-way many-to-many relationship between source and
 // target. Updates the target(s) when source field is changed. The synced data
 // is written to a nested map using the source document and field accessible
 // using `resource.sync.{sourceDocument}.{sourceField}`.
 export const sync = (opt: {
-    sourceDocument: string;
-    sourceField: string[];
-    targetDocument: string;
+    sourceCollection: string;
+    sourceField: Field;
+    targetCollection: string;
 }) =>
     functions.firestore
-        .document(`${opt.sourceDocument}/{sourceId}`)
+        .document(`${opt.sourceCollection}/{sourceId}`)
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
-            const targetCollection = db.collection(opt.targetDocument);
 
-            let before: any = change.before.data() || {};
-            for (const sourceFieldPart of opt.sourceField) {
-                if (!before) break;
-                before = before[sourceFieldPart];
-            }
-            if (!Array.isArray(before)) {
-                before = [];
-            }
+            const beforeTargetIds = fieldData(
+                opt.sourceField,
+                change.before.data(),
+            );
+            const afterTargetIds = fieldData(
+                opt.sourceField,
+                change.after.data(),
+            );
 
-            let after: any = change.after.data() || {};
-            for (const sourceFieldPart of opt.sourceField) {
-                if (!after) break;
-                after = after[sourceFieldPart];
-            }
-            if (!Array.isArray(after)) {
-                after = [];
-            }
-
-            let syncPath = `sync.${opt.sourceDocument}`;
-            for (const sourceFieldPart of opt.sourceField) {
-                syncPath += `.${sourceFieldPart}`;
-            }
-
-            console.log(before, after, syncPath);
-
-            const added = findNew(before, after);
-            for (const targetId of added) {
-                await createIfNotExists(targetCollection as any, targetId, {});
-                await targetCollection.doc(targetId).update({
-                    [syncPath]: admin.firestore.FieldValue.arrayUnion(sourceId),
+            const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
+            for (const targetId of addedTargetIds) {
+                await update("arrayUnion")({
+                    collection: opt.targetCollection,
+                    id: targetId,
+                    field: [opt.sourceCollection, ...opt.sourceField],
+                    items: [sourceId],
                 });
             }
 
-            const removed = findNew(after, before);
-            for (const targetId of removed) {
-                await createIfNotExists(targetCollection as any, targetId, {});
-                await targetCollection.doc(targetId).update({
-                    [syncPath]: admin.firestore.FieldValue.arrayRemove(
-                        sourceId,
-                    ),
+            const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
+            for (const targetId of removedTargetIds) {
+                await update("arrayRemove")({
+                    collection: opt.targetCollection,
+                    id: targetId,
+                    field: [opt.sourceCollection, ...opt.sourceField],
+                    items: [sourceId],
                 });
             }
         });
+
+export const syncCopy = (opt: {
+    sourceCollection: string;
+    sourceField: Field;
+    sourceTargetIdsField: Field;
+    targetCollection: string;
+}) => {
+    // TODO copy source field to targetIds.
+};

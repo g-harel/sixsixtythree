@@ -1,31 +1,31 @@
 import {sync} from "./utils";
 
 export const syncGroupMembersToUsers = sync({
-    sourceDocument: "groups",
+    sourceCollection: "groups",
     sourceField: ["members"],
-    targetDocument: "users",
+    targetCollection: "users",
 });
 
 export const syncProjectEditorsToGroups = sync({
-    sourceDocument: "projects",
+    sourceCollection: "projects",
     sourceField: ["editors", "groups"],
-    targetDocument: "groups",
+    targetCollection: "groups",
 });
 
 export const syncProjectReadersToGroups = sync({
-    sourceDocument: "projects",
+    sourceCollection: "projects",
     sourceField: ["readers", "groups"],
-    targetDocument: "groups",
+    targetCollection: "groups",
 });
 
 export const syncProjectEditorsToUsers = sync({
-    sourceDocument: "projects",
+    sourceCollection: "projects",
     sourceField: ["editors", "users"],
-    targetDocument: "users",
+    targetCollection: "users",
 });
 
 export const syncProjectReadersToUsers = sync({
-    sourceDocument: "projects",
+    sourceCollection: "projects",
     sourceField: ["readers", "users"],
-    targetDocument: "users",
+    targetCollection: "users",
 });
