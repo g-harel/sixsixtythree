@@ -4,9 +4,6 @@ import * as functions from "firebase-functions";
 admin.initializeApp();
 const db = admin.firestore();
 
-// TODO make string.
-type Field = string[];
-
 // Returns an array of items that are in B, but not A.
 const findNew = (a: string[], b: string[]) => {
     const seen: Record<string, boolean> = {};
@@ -67,33 +64,32 @@ const createIfNotExists = async (
 const updateAsSet = (type: "add" | "remove") => async (opt: {
     collection: string;
     id: string;
-    field: Field;
+    field: string;
     items: string[];
 }) => {
     const collection = db.collection(opt.collection);
-    const fieldPath = opt.field.join(".");
     await createIfNotExists(collection, opt.id, {});
     const fieldValueType = type === "add" ? "arrayUnion" : "arrayRemove";
     await collection.doc(opt.id).update({
-        [fieldPath]: admin.firestore.FieldValue[fieldValueType](...opt.items),
+        [opt.field]: admin.firestore.FieldValue[fieldValueType](...opt.items),
     });
 };
 
 // Updates a list field in the target document.
+// TODO make able to be called more than once (make map [targetID -> sourceID]).
 const updateAsList = (type: "add" | "remove") => async (opt: {
     collection: string;
     id: string;
-    field: Field;
+    field: string;
     items: string[];
 }) => {
     const collection = db.collection(opt.collection);
-    const fieldPath = opt.field.join(".");
     await createIfNotExists(collection, opt.id, {});
     const ref = collection.doc(opt.id);
     db.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(ref);
         await collection.doc(opt.id).update({
-            [fieldPath]: edit(await snapshot.get(fieldPath), type, opt.items),
+            [opt.field]: edit(await snapshot.get(opt.field), type, opt.items),
         });
     });
 };
@@ -104,7 +100,7 @@ const updateAsList = (type: "add" | "remove") => async (opt: {
 // using `resource.sync.{sourceDocument}.{sourceField}`.
 export const sync = (opt: {
     sourceCollection: string;
-    sourceField: Field;
+    sourceField: string;
     targetCollection: string;
 }) =>
     functions.firestore
@@ -112,15 +108,15 @@ export const sync = (opt: {
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds = change.before.get(opt.sourceField.join("."));
-            const afterTargetIds = change.after.get(opt.sourceField.join("."));
+            const beforeTargetIds = change.before.get(opt.sourceField);
+            const afterTargetIds = change.after.get(opt.sourceField);
 
             const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
             for (const targetId of addedTargetIds) {
                 await updateAsSet("add")({
                     collection: opt.targetCollection,
                     id: targetId,
-                    field: ["sync", opt.sourceCollection, ...opt.sourceField],
+                    field: `sync.${opt.sourceCollection}.${opt.sourceField}`,
                     items: [sourceId],
                 });
             }
@@ -130,7 +126,7 @@ export const sync = (opt: {
                 await updateAsSet("remove")({
                     collection: opt.targetCollection,
                     id: targetId,
-                    field: ["sync", opt.sourceCollection, ...opt.sourceField],
+                    field: `sync.${opt.sourceCollection}.${opt.sourceField}`,
                     items: [sourceId],
                 });
             }
@@ -138,8 +134,8 @@ export const sync = (opt: {
 
 export const syncCopy = (opt: {
     sourceCollection: string;
-    sourceField: Field;
-    sourceTargetIdsField: Field;
+    sourceField: string;
+    sourceTargetIdsField: string;
     targetCollection: string;
 }) => {
     // TODO copy source field to targetIds.
