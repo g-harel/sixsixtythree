@@ -1,48 +1,11 @@
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
+import {findNew} from "../shared/utils";
+import {copyField, syncField} from "../shared/schema";
+
 admin.initializeApp();
 const db = admin.firestore();
-
-// Returns an array of items that are in B, but not A.
-const findNew = (a: string[], b: string[]) => {
-    const seen: Record<string, boolean> = {};
-    for (const item of b) {
-        seen[item] = true;
-    }
-    for (const item of a) {
-        delete seen[item];
-    }
-    return Object.keys(seen);
-};
-
-const edit = (
-    arr: string[],
-    type: "add" | "remove",
-    items: string[],
-): string[] => {
-    const itemCounts: Record<string, number> = {};
-    for (const beforeItem of arr) {
-        if (itemCounts[beforeItem] === undefined) itemCounts[beforeItem] = 0;
-        itemCounts[beforeItem] += 1;
-    }
-    for (const item of items) {
-        if (itemCounts[item] === undefined) itemCounts[item] = 0;
-        if (type === "add") {
-            itemCounts[item] += 1;
-        }
-        if (type === "remove") {
-            itemCounts[item] -= 1;
-        }
-    }
-    const afterList: string[] = [];
-    for (const item of Object.keys(itemCounts)) {
-        for (let i = 0; i < itemCounts[item]; i++) {
-            afterList.push(item);
-        }
-    }
-    return afterList;
-};
 
 // Creates a new document at the document path in the given collection if it
 // doesn't already exist.
@@ -61,7 +24,7 @@ const createIfNotExists = async (
 };
 
 // Updates a list field in the target document.
-const updateAsSet = (type: "add" | "remove") => async (opt: {
+const updateSet = (type: "add" | "remove") => async (opt: {
     collection: string;
     id: string;
     field: string;
@@ -75,22 +38,23 @@ const updateAsSet = (type: "add" | "remove") => async (opt: {
     });
 };
 
-// Updates a list field in the target document.
-// TODO make able to be called more than once (make map [targetID -> sourceID]).
-const updateAsList = (type: "add" | "remove") => async (opt: {
+// TODO delete key if list is empty afterwards.
+const updateMap = (type: "add" | "remove") => async (options: {
     collection: string;
     id: string;
     field: string;
-    items: string[];
+    // Map values will be added/removed from the list at the associated key.
+    items: Record<string, string>;
 }) => {
-    const collection = db.collection(opt.collection);
-    await createIfNotExists(collection, opt.id, {});
-    const ref = collection.doc(opt.id);
+    const collection = db.collection(options.collection);
+    await createIfNotExists(collection, options.id, {});
+    const ref = collection.doc(options.id);
     db.runTransaction(async (transaction) => {
-        const snapshot = await transaction.get(ref);
-        await collection.doc(opt.id).update({
-            [opt.field]: edit(await snapshot.get(opt.field), type, opt.items),
+        await transaction.update(ref, {
+            // TODO prefix items.
         });
+        const snapshot = await transaction.get(ref);
+        // TODO check for empty and update to delete only if required
     });
 };
 
@@ -98,41 +62,44 @@ const updateAsList = (type: "add" | "remove") => async (opt: {
 // target. Updates the target(s) when source field is changed. The synced data
 // is written to a nested map using the source document and field accessible
 // using `resource.sync.{sourceDocument}.{sourceField}`.
-export const sync = (opt: {
+// TODO make updates in parallel.
+export const sync = (options: {
     sourceCollection: string;
     sourceField: string;
     targetCollection: string;
 }) =>
     functions.firestore
-        .document(`${opt.sourceCollection}/{sourceId}`)
+        .document(`${options.sourceCollection}/{sourceId}`)
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds = change.before.get(opt.sourceField);
-            const afterTargetIds = change.after.get(opt.sourceField);
+            const beforeTargetIds = change.before.get(options.sourceField);
+            const afterTargetIds = change.after.get(options.sourceField);
+
+            const field = `${syncField}.${options.sourceCollection}.${options.sourceField}`;
 
             const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
             for (const targetId of addedTargetIds) {
-                await updateAsSet("add")({
-                    collection: opt.targetCollection,
+                await updateSet("add")({
+                    collection: options.targetCollection,
                     id: targetId,
-                    field: `sync.${opt.sourceCollection}.${opt.sourceField}`,
+                    field,
                     items: [sourceId],
                 });
             }
 
             const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
             for (const targetId of removedTargetIds) {
-                await updateAsSet("remove")({
-                    collection: opt.targetCollection,
+                await updateSet("remove")({
+                    collection: options.targetCollection,
                     id: targetId,
-                    field: `sync.${opt.sourceCollection}.${opt.sourceField}`,
+                    field,
                     items: [sourceId],
                 });
             }
         });
 
-export const syncCopy = (opt: {
+export const copy = (options: {
     sourceCollection: string;
     sourceField: string;
     sourceTargetIdsField: string;
