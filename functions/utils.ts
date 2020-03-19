@@ -24,37 +24,54 @@ const createIfNotExists = async (
 };
 
 // Updates a list field in the target document.
-const updateSet = (type: "add" | "remove") => async (opt: {
+const updateSet = (type: "arrayUnion" | "arrayRemove") => async (options: {
     collection: string;
     id: string;
     field: string;
     items: string[];
 }) => {
-    const collection = db.collection(opt.collection);
-    await createIfNotExists(collection, opt.id, {});
-    const fieldValueType = type === "add" ? "arrayUnion" : "arrayRemove";
-    await collection.doc(opt.id).update({
-        [opt.field]: admin.firestore.FieldValue[fieldValueType](...opt.items),
+    const collection = db.collection(options.collection);
+    await createIfNotExists(collection, options.id, {});
+    await collection.doc(options.id).update({
+        [options.field]: admin.firestore.FieldValue[type](...options.items),
     });
 };
 
-// TODO delete key if list is empty afterwards.
-const updateMap = (type: "add" | "remove") => async (options: {
+// Updates a map of lists field in the target document.
+// If one of the lists is empty after the update, it is deleted.
+const updateMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
     collection: string;
     id: string;
     field: string;
     // Map values will be added/removed from the list at the associated key.
-    items: Record<string, string>;
+    items: Record<string, string[]>;
 }) => {
     const collection = db.collection(options.collection);
     await createIfNotExists(collection, options.id, {});
     const ref = collection.doc(options.id);
+
+    const updates: Record<string, FirebaseFirestore.FieldValue> = {};
+    Object.entries(options.items).forEach(([key, value]) => {
+        const field = `${options.field}.${key}`;
+        updates[field] = admin.firestore.FieldValue[type](...value);
+    });
+
     db.runTransaction(async (transaction) => {
-        await transaction.update(ref, {
-            // TODO prefix items.
-        });
+        await transaction.update(ref, updates);
         const snapshot = await transaction.get(ref);
-        // TODO check for empty and update to delete only if required
+        const data = snapshot.get(options.field);
+
+        const deletes: Record<string, FirebaseFirestore.FieldValue> = {};
+        Object.entries(data).forEach(([key, value]) => {
+            if (!Array.isArray(value)) return;
+            if (value.length > 0) return;
+            const field = `${options.field}.${key}`;
+            updates[field] = admin.firestore.FieldValue.delete();
+        });
+
+        if (Object.keys(deletes).length > 0) {
+            await transaction.update(ref, deletes);
+        }
     });
 };
 
@@ -80,7 +97,7 @@ export const sync = (options: {
 
             const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
             for (const targetId of addedTargetIds) {
-                await updateSet("add")({
+                await updateSet("arrayUnion")({
                     collection: options.targetCollection,
                     id: targetId,
                     field,
@@ -90,7 +107,7 @@ export const sync = (options: {
 
             const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
             for (const targetId of removedTargetIds) {
-                await updateSet("remove")({
+                await updateSet("arrayRemove")({
                     collection: options.targetCollection,
                     id: targetId,
                     field,
