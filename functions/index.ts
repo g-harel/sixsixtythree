@@ -1,4 +1,5 @@
-import {sync} from "./utils";
+import {copy, sync} from "./utils";
+import {syncField} from "../shared/schema";
 
 export const syncGroupMembersToUsers = sync({
     sourceCollection: "groups",
@@ -27,5 +28,19 @@ export const syncProjectEditorsToUsers = sync({
 export const syncProjectReadersToUsers = sync({
     sourceCollection: "projects",
     sourceField: "readers.users",
+    targetCollection: "users",
+});
+
+export const copyProjectEditorsFromGroupsToUsers = copy({
+    sourceCollection: "groups",
+    sourceField: syncField + ".projects.editors.groups",
+    sourceCopyField: "members",
+    targetCollection: "users",
+});
+
+export const copyProjectReadersFromGroupsToUsers = copy({
+    sourceCollection: "groups",
+    sourceField: syncField + ".projects.readers.groups",
+    sourceCopyField: "members",
     targetCollection: "users",
 });

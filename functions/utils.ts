@@ -116,11 +116,47 @@ export const sync = (options: {
             }
         });
 
+// TODO make updates in parallel.
 export const copy = (options: {
     sourceCollection: string;
     sourceField: string;
-    sourceTargetIdsField: string;
+    sourceCopyField: string;
     targetCollection: string;
-}) => {
-    // TODO copy source field to targetIds.
-};
+}) =>
+    functions.firestore
+        .document(`${options.sourceCollection}/{sourceId}`)
+        .onWrite(async (change, context) => {
+            const sourceId = context.params["sourceId"];
+
+            const beforeTargetIds = change.before.get(options.sourceField);
+            const afterTargetIds = change.after.get(options.sourceField);
+
+            const field = `${copyField}.${options.sourceCollection}.${options.sourceField}`;
+
+            // TODO also update when "sourceCopyField" changes.
+            const copyIds = change.after.get(options.sourceCopyField);
+            const update: Record<string, string[]> = {};
+            for (const id of copyIds) {
+                update[id] = [sourceId];
+            }
+
+            const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
+            for (const targetId of addedTargetIds) {
+                await updateMap("arrayUnion")({
+                    collection: options.targetCollection,
+                    id: targetId,
+                    field,
+                    items: update,
+                });
+            }
+
+            const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
+            for (const targetId of removedTargetIds) {
+                await updateMap("arrayRemove")({
+                    collection: options.targetCollection,
+                    id: targetId,
+                    field,
+                    items: update,
+                });
+            }
+        });
