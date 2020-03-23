@@ -1,6 +1,12 @@
 import {copy, sync} from "./utils";
 import {syncField} from "../shared/schema";
 
+// TODO more error handling, these preserve data integrity.
+// This could be done by having a kube-like approach with a desired state
+// instead of brittle listeners. State could be spot checked for specific
+// collections/ids when those get updated, or in the background. Would also be
+// nice to have less (~1) functions ran when a document gets updated.
+
 export const syncGroupMembersToUsers = sync({
     sourceCollection: "groups",
     sourceField: "members",
@@ -44,3 +50,16 @@ export const copyProjectReadersFromGroupsToUsers = copy({
     sourceCopyField: "members",
     targetCollection: "users",
 });
+
+export const syncTest = sync({
+    sourceCollection: "test_source",
+    sourceField: "sync_to",
+    targetCollection: "test_target",
+});
+
+export const copyTest = copy({
+    sourceCollection: "test_source",
+    sourceField: "copy_to",
+    sourceCopyField: "copy_ids",
+    targetCollection: "test_target",
+})

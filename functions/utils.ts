@@ -15,10 +15,10 @@ const createIfNotExists = async (
     data: FirebaseFirestore.DocumentData,
 ) => {
     const ref = collection.doc(documentPath);
-    db.runTransaction(async (transaction) => {
+    await db.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(ref);
         if (!snapshot.exists) {
-            await ref.set(data);
+            await transaction.set(ref, data);
         }
     });
 };
@@ -39,7 +39,7 @@ const updateSet = (type: "arrayUnion" | "arrayRemove") => async (options: {
 
 // Updates a map of lists field in the target document.
 // If one of the lists is empty after the update, it is deleted.
-const updateMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
+const updateSetMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
     collection: string;
     id: string;
     field: string;
@@ -56,8 +56,10 @@ const updateMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
         updates[field] = admin.firestore.FieldValue[type](...value);
     });
 
-    db.runTransaction(async (transaction) => {
-        await transaction.update(ref, updates);
+    await ref.update(updates);
+
+    // TODO should be a different func.
+    await db.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(ref);
         const data = snapshot.get(options.field);
 
@@ -66,12 +68,13 @@ const updateMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
             if (!Array.isArray(value)) return;
             if (value.length > 0) return;
             const field = `${options.field}.${key}`;
-            updates[field] = admin.firestore.FieldValue.delete();
+            deletes[field] = admin.firestore.FieldValue.delete();
         });
-
-        if (Object.keys(deletes).length > 0) {
-            await transaction.update(ref, deletes);
+        if (Object.keys(deletes).length === 0) {
+            return;
         }
+
+        await transaction.update(ref, deletes);
     });
 };
 
@@ -90,8 +93,8 @@ export const sync = (options: {
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds = change.before.get(options.sourceField);
-            const afterTargetIds = change.after.get(options.sourceField);
+            const beforeTargetIds: string[] = change.before.get(options.sourceField) || [];
+            const afterTargetIds: string[] = change.after.get(options.sourceField) || [];
 
             const field = `${syncField}.${options.sourceCollection}.${options.sourceField}`;
 
@@ -128,21 +131,21 @@ export const copy = (options: {
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds = change.before.get(options.sourceField);
-            const afterTargetIds = change.after.get(options.sourceField);
+            const beforeTargetIds: string[] = change.before.get(options.sourceField) || [];
+            const afterTargetIds: string[] = change.after.get(options.sourceField) || [];
 
             const field = `${copyField}.${options.sourceCollection}.${options.sourceField}`;
 
             // TODO also update when "sourceCopyField" changes.
             const copyIds = change.after.get(options.sourceCopyField);
             const update: Record<string, string[]> = {};
-            for (const id of copyIds) {
-                update[id] = [sourceId];
+            for (const copyId of copyIds) {
+                update[copyId] = [sourceId];
             }
 
             const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
             for (const targetId of addedTargetIds) {
-                await updateMap("arrayUnion")({
+                await updateSetMap("arrayUnion")({
                     collection: options.targetCollection,
                     id: targetId,
                     field,
@@ -152,7 +155,7 @@ export const copy = (options: {
 
             const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
             for (const targetId of removedTargetIds) {
-                await updateMap("arrayRemove")({
+                await updateSetMap("arrayRemove")({
                     collection: options.targetCollection,
                     id: targetId,
                     field,
