@@ -62,4 +62,4 @@ export const copyTest = copy({
     sourceField: "copy_to",
     sourceCopyField: "copy_ids",
     targetCollection: "test_target",
-})
+});

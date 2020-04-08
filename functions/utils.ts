@@ -38,7 +38,6 @@ const updateSet = (type: "arrayUnion" | "arrayRemove") => async (options: {
 };
 
 // Updates a map of lists field in the target document.
-// If one of the lists is empty after the update, it is deleted.
 const updateSetMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
     collection: string;
     id: string;
@@ -57,9 +56,15 @@ const updateSetMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
     });
 
     await ref.update(updates);
+};
 
-    // TODO should be a different func.
+const removeEmptyListsFromMap = async (options: {
+    collection: string;
+    id: string;
+    field: string;
+}) =>
     await db.runTransaction(async (transaction) => {
+        const ref = db.collection(options.collection).doc(options.id);
         const snapshot = await transaction.get(ref);
         const data = snapshot.get(options.field);
 
@@ -76,7 +81,6 @@ const updateSetMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
 
         await transaction.update(ref, deletes);
     });
-};
 
 // Helper to maintain a one-way many-to-many relationship between source and
 // target. Updates the target(s) when source field is changed. The synced data
@@ -93,8 +97,10 @@ export const sync = (options: {
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds: string[] = change.before.get(options.sourceField) || [];
-            const afterTargetIds: string[] = change.after.get(options.sourceField) || [];
+            const beforeTargetIds: string[] =
+                change.before.get(options.sourceField) || [];
+            const afterTargetIds: string[] =
+                change.after.get(options.sourceField) || [];
 
             const field = `${syncField}.${options.sourceCollection}.${options.sourceField}`;
 
@@ -131,8 +137,10 @@ export const copy = (options: {
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
 
-            const beforeTargetIds: string[] = change.before.get(options.sourceField) || [];
-            const afterTargetIds: string[] = change.after.get(options.sourceField) || [];
+            const beforeTargetIds: string[] =
+                change.before.get(options.sourceField) || [];
+            const afterTargetIds: string[] =
+                change.after.get(options.sourceField) || [];
 
             const field = `${copyField}.${options.sourceCollection}.${options.sourceField}`;
 
@@ -160,6 +168,11 @@ export const copy = (options: {
                     id: targetId,
                     field,
                     items: update,
+                });
+                await removeEmptyListsFromMap({
+                    collection: options.targetCollection,
+                    id: targetId,
+                    field,
                 });
             }
         });
