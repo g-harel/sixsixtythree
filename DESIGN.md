@@ -42,7 +42,6 @@ type Schema {
     users Map<Email, {
         # Sync with .groups.members to avoid scanning.
         groups List<GroupId>
-        # TODO add synced fields to keep track of project permissions.
     }>
     projects Map<ProjectId, {
         # Use root task for name, description, etc.

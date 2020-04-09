@@ -8,58 +8,52 @@ import {syncField} from "../shared/schema";
 // nice to have less (~1) functions ran when a document gets updated.
 
 export const syncGroupMembersToUsers = sync({
-    sourceCollection: "groups",
-    sourceField: "members",
-    targetCollection: "users",
+    source: "groups",
+    sourceFkey: "members",
+    target: "users",
+    targetFkey: "groups",
 });
 
 export const syncProjectEditorsToGroups = sync({
-    sourceCollection: "projects",
-    sourceField: "editors.groups",
-    targetCollection: "groups",
+    source: "projects",
+    sourceFkey: "editors.groups",
+    target: "groups",
+    targetFkey: "editor_projects",
 });
 
 export const syncProjectReadersToGroups = sync({
-    sourceCollection: "projects",
-    sourceField: "readers.groups",
-    targetCollection: "groups",
+    source: "projects",
+    sourceFkey: "readers.groups",
+    target: "groups",
+    targetFkey: "reader_projects",
 });
 
 export const syncProjectEditorsToUsers = sync({
-    sourceCollection: "projects",
-    sourceField: "editors.users",
-    targetCollection: "users",
+    source: "projects",
+    sourceFkey: "editors.users",
+    target: "users",
+    targetFkey: "editor_projects",
 });
 
 export const syncProjectReadersToUsers = sync({
-    sourceCollection: "projects",
-    sourceField: "readers.users",
-    targetCollection: "users",
+    source: "projects",
+    sourceFkey: "readers.users",
+    target: "users",
+    targetFkey: "reader_projects",
 });
 
 export const copyProjectEditorsFromGroupsToUsers = copy({
-    sourceCollection: "groups",
-    sourceField: syncField + ".projects.editors.groups",
-    sourceCopyField: "members",
-    targetCollection: "users",
+    source: "groups",
+    sourceFkey: "members",
+    sourceCopiedData: syncField + ".editor_projects",
+    target: "users",
+    targetField: "editor_projects_from_groups",
 });
 
 export const copyProjectReadersFromGroupsToUsers = copy({
-    sourceCollection: "groups",
-    sourceField: syncField + ".projects.readers.groups",
-    sourceCopyField: "members",
-    targetCollection: "users",
-});
-
-export const syncTest = sync({
-    sourceCollection: "test_source",
-    sourceField: "sync_to",
-    targetCollection: "test_target",
-});
-
-export const copyTest = copy({
-    sourceCollection: "test_source",
-    sourceField: "copy_to",
-    sourceCopyField: "copy_ids",
-    targetCollection: "test_target",
+    source: "groups",
+    sourceFkey: "members",
+    sourceCopiedData: syncField + ".reader_projects",
+    target: "users",
+    targetField: "reader_projects_from_groups",
 });

@@ -2,7 +2,7 @@ import * as admin from "firebase-admin";
 import * as functions from "firebase-functions";
 
 import {findNew} from "../shared/utils";
-import {copyField, syncField} from "../shared/schema";
+import {syncField} from "../shared/schema";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -82,97 +82,110 @@ const removeEmptyListsFromMap = async (options: {
         await transaction.update(ref, deletes);
     });
 
+// TODO make updates in parallel.
+const handleChange = async (options: {
+    field: string;
+    change: functions.Change<functions.firestore.DocumentSnapshot>;
+    addedHandler: (value: string) => Promise<any>;
+    removedHandler: (value: string) => Promise<any>;
+}) => {
+    const beforeValues: string[] =
+        options.change.before.get(options.field) || [];
+    const afterValues: string[] = options.change.after.get(options.field) || [];
+
+    const addedValues = findNew(beforeValues, afterValues);
+    for (const value of addedValues) {
+        await options.addedHandler(value);
+    }
+
+    const removedValues = findNew(afterValues, beforeValues);
+    for (const value of removedValues) {
+        await options.removedHandler(value);
+    }
+};
+
 // Helper to maintain a one-way many-to-many relationship between source and
 // target. Updates the target(s) when source field is changed. The synced data
 // is written to a nested map using the source document and field accessible
 // using `resource.sync.{sourceDocument}.{sourceField}`.
-// TODO make updates in parallel.
 export const sync = (options: {
-    sourceCollection: string;
-    sourceField: string;
-    targetCollection: string;
+    source: string;
+    sourceFkey: string;
+    target: string;
+    targetFkey: string;
 }) =>
     functions.firestore
-        .document(`${options.sourceCollection}/{sourceId}`)
+        .document(`${options.source}/{sourceId}`)
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
+            const field = `${syncField}.${options.targetFkey}`;
 
-            const beforeTargetIds: string[] =
-                change.before.get(options.sourceField) || [];
-            const afterTargetIds: string[] =
-                change.after.get(options.sourceField) || [];
-
-            const field = `${syncField}.${options.sourceCollection}.${options.sourceField}`;
-
-            const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
-            for (const targetId of addedTargetIds) {
-                await updateSet("arrayUnion")({
-                    collection: options.targetCollection,
-                    id: targetId,
-                    field,
-                    items: [sourceId],
-                });
-            }
-
-            const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
-            for (const targetId of removedTargetIds) {
-                await updateSet("arrayRemove")({
-                    collection: options.targetCollection,
-                    id: targetId,
-                    field,
-                    items: [sourceId],
-                });
-            }
+            // Add or remove sourceId from targets.
+            await handleChange({
+                field: options.sourceFkey,
+                change,
+                addedHandler: async (targetId) => {
+                    await updateSet("arrayUnion")({
+                        collection: options.target,
+                        id: targetId,
+                        field,
+                        items: [sourceId],
+                    });
+                },
+                removedHandler: async (targetId) => {
+                    await updateSet("arrayRemove")({
+                        collection: options.target,
+                        id: targetId,
+                        field,
+                        items: [sourceId],
+                    });
+                },
+            });
         });
 
-// TODO make updates in parallel.
 export const copy = (options: {
-    sourceCollection: string;
-    sourceField: string;
-    sourceCopyField: string;
-    targetCollection: string;
+    source: string;
+    sourceFkey: string;
+    sourceCopiedData: string;
+    target: string;
+    targetField: string;
 }) =>
     functions.firestore
-        .document(`${options.sourceCollection}/{sourceId}`)
+        .document(`${options.source}/{sourceId}`)
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
+            const field = `${syncField}.${options.targetField}`;
 
-            const beforeTargetIds: string[] =
-                change.before.get(options.sourceField) || [];
-            const afterTargetIds: string[] =
-                change.after.get(options.sourceField) || [];
-
-            const field = `${copyField}.${options.sourceCollection}.${options.sourceField}`;
-
-            // TODO also update when "sourceCopyField" changes.
-            const copyIds = change.after.get(options.sourceCopyField);
+            // TODO also update when "sourceFkey" changes.
+            const copyIds = change.after.get(options.sourceFkey);
             const update: Record<string, string[]> = {};
             for (const copyId of copyIds) {
                 update[copyId] = [sourceId];
             }
 
-            const addedTargetIds = findNew(beforeTargetIds, afterTargetIds);
-            for (const targetId of addedTargetIds) {
-                await updateSetMap("arrayUnion")({
-                    collection: options.targetCollection,
-                    id: targetId,
-                    field,
-                    items: update,
-                });
-            }
-
-            const removedTargetIds = findNew(afterTargetIds, beforeTargetIds);
-            for (const targetId of removedTargetIds) {
-                await updateSetMap("arrayRemove")({
-                    collection: options.targetCollection,
-                    id: targetId,
-                    field,
-                    items: update,
-                });
-                await removeEmptyListsFromMap({
-                    collection: options.targetCollection,
-                    id: targetId,
-                    field,
-                });
-            }
+            await handleChange({
+                field: options.sourceCopiedData,
+                change,
+                addedHandler: async (targetId) => {
+                    await updateSetMap("arrayUnion")({
+                        collection: options.target,
+                        id: targetId,
+                        field,
+                        items: update,
+                    });
+                },
+                removedHandler: async (targetId) => {
+                    await updateSetMap("arrayRemove")({
+                        collection: options.target,
+                        id: targetId,
+                        field,
+                        items: update,
+                    });
+                    await removeEmptyListsFromMap({
+                        collection: options.target,
+                        id: targetId,
+                        field,
+                    });
+                },
+            });
         });
