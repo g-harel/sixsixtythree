@@ -45,7 +45,7 @@ export const syncProjectReadersToUsers = sync({
 export const copyProjectEditorsFromGroupsToUsers = copy({
     source: "groups",
     sourceFkey: "members",
-    sourceCopiedData: syncField + ".editor_projects",
+    sourceCopiedItems: syncField + ".editor_projects",
     target: "users",
     targetField: "editor_projects_from_groups",
 });
@@ -53,7 +53,7 @@ export const copyProjectEditorsFromGroupsToUsers = copy({
 export const copyProjectReadersFromGroupsToUsers = copy({
     source: "groups",
     sourceFkey: "members",
-    sourceCopiedData: syncField + ".reader_projects",
+    sourceCopiedItems: syncField + ".reader_projects",
     target: "users",
     targetField: "reader_projects_from_groups",
 });

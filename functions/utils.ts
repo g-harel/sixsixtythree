@@ -146,7 +146,7 @@ export const sync = (options: {
 export const copy = (options: {
     source: string;
     sourceFkey: string;
-    sourceCopiedData: string;
+    sourceCopiedItems: string;
     target: string;
     targetField: string;
 }) =>
@@ -154,38 +154,88 @@ export const copy = (options: {
         .document(`${options.source}/{sourceId}`)
         .onWrite(async (change, context) => {
             const sourceId = context.params["sourceId"];
-            const field = `${syncField}.${options.targetField}`;
+            const targetField = `${syncField}.${options.targetField}`;
 
-            // TODO also update when "sourceFkey" changes.
-            const copyIds = change.after.get(options.sourceFkey);
-            const update: Record<string, string[]> = {};
-            for (const copyId of copyIds) {
-                update[copyId] = [sourceId];
-            }
+            const genUpdate = (items: string[]) => {
+                const update: Record<string, string[]> = {};
+                for (const item of items) {
+                    update[item] = [sourceId];
+                }
+                return update;
+            };
 
+            const afterItemsUpdate = genUpdate(
+                change.after.get(options.sourceCopiedItems),
+            );
+            const allItemsUpdate = genUpdate(
+                change.after
+                    .get(options.sourceCopiedItems)
+                    .concat(...change.after.get(options.sourceCopiedItems)),
+            );
+
+            // Add or remove copied items when fkey added/removed.
             await handleChange({
-                field: options.sourceCopiedData,
+                field: options.sourceFkey,
                 change,
                 addedHandler: async (targetId) => {
                     await updateSetMap("arrayUnion")({
                         collection: options.target,
                         id: targetId,
-                        field,
-                        items: update,
+                        field: targetField,
+                        items: afterItemsUpdate,
                     });
                 },
                 removedHandler: async (targetId) => {
                     await updateSetMap("arrayRemove")({
                         collection: options.target,
                         id: targetId,
-                        field,
-                        items: update,
+                        field: targetField,
+                        items: allItemsUpdate,
                     });
                     await removeEmptyListsFromMap({
                         collection: options.target,
                         id: targetId,
-                        field,
+                        field: targetField,
                     });
                 },
             });
+
+            // Add new copied items to all fkeys.
+            const newItems = findNew(
+                change.before.get(options.sourceCopiedItems),
+                change.after.get(options.sourceCopiedItems),
+            );
+            if (newItems.length > 0) {
+                const newItemsUpdate = genUpdate(newItems);
+                for (const targetId of change.after.get(options.sourceFkey)) {
+                    await updateSetMap("arrayUnion")({
+                        collection: options.target,
+                        id: targetId,
+                        field: targetField,
+                        items: newItemsUpdate,
+                    });
+                }
+            }
+
+            // Remove old copied items from all fkeys.
+            const oldItems = findNew(
+                change.after.get(options.sourceCopiedItems),
+                change.before.get(options.sourceCopiedItems),
+            );
+            if (oldItems.length > 0) {
+                const oldItemsUpdate = genUpdate(oldItems);
+                for (const targetId of change.after.get(options.sourceFkey)) {
+                    await updateSetMap("arrayRemove")({
+                        collection: options.target,
+                        id: targetId,
+                        field: targetField,
+                        items: oldItemsUpdate,
+                    });
+                    await removeEmptyListsFromMap({
+                        collection: options.target,
+                        id: targetId,
+                        field: targetField,
+                    });
+                }
+            }
         });
