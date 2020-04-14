@@ -49,6 +49,8 @@ const updateSetMap = (type: "arrayUnion" | "arrayRemove") => async (options: {
     await createIfNotExists(collection, options.id, {});
     const ref = collection.doc(options.id);
 
+    if (Object.keys(options.items).length === 0) return;
+
     const updates: Record<string, FirebaseFirestore.FieldValue> = {};
     Object.entries(options.items).forEach(([key, value]) => {
         const field = `${options.field}.${key}`;
@@ -156,6 +158,12 @@ export const copy = (options: {
             const sourceId = context.params["sourceId"];
             const targetField = `${syncField}.${options.targetField}`;
 
+            const afterSourceCopiedItems =
+                change.after.get(options.sourceCopiedItems) || [];
+            const beforeSourceCopiedItems =
+                change.after.get(options.sourceCopiedItems) || [];
+            const afterSourceFkey = change.after.get(options.sourceFkey) || [];
+
             const genUpdate = (items: string[]) => {
                 const update: Record<string, string[]> = {};
                 for (const item of items) {
@@ -164,13 +172,9 @@ export const copy = (options: {
                 return update;
             };
 
-            const afterItemsUpdate = genUpdate(
-                change.after.get(options.sourceCopiedItems),
-            );
+            const afterItemsUpdate = genUpdate(afterSourceCopiedItems);
             const allItemsUpdate = genUpdate(
-                change.after
-                    .get(options.sourceCopiedItems)
-                    .concat(...change.after.get(options.sourceCopiedItems)),
+                afterSourceCopiedItems.concat(...beforeSourceCopiedItems),
             );
 
             // Add or remove copied items when fkey added/removed.
@@ -200,14 +204,16 @@ export const copy = (options: {
                 },
             });
 
+            // TODO these two don't work.
+
             // Add new copied items to all fkeys.
             const newItems = findNew(
-                change.before.get(options.sourceCopiedItems),
-                change.after.get(options.sourceCopiedItems),
+                beforeSourceCopiedItems,
+                afterSourceCopiedItems,
             );
             if (newItems.length > 0) {
                 const newItemsUpdate = genUpdate(newItems);
-                for (const targetId of change.after.get(options.sourceFkey)) {
+                for (const targetId of afterSourceFkey) {
                     await updateSetMap("arrayUnion")({
                         collection: options.target,
                         id: targetId,
@@ -219,12 +225,12 @@ export const copy = (options: {
 
             // Remove old copied items from all fkeys.
             const oldItems = findNew(
-                change.after.get(options.sourceCopiedItems),
-                change.before.get(options.sourceCopiedItems),
+                afterSourceCopiedItems,
+                beforeSourceCopiedItems,
             );
             if (oldItems.length > 0) {
                 const oldItemsUpdate = genUpdate(oldItems);
-                for (const targetId of change.after.get(options.sourceFkey)) {
+                for (const targetId of afterSourceFkey) {
                     await updateSetMap("arrayRemove")({
                         collection: options.target,
                         id: targetId,
