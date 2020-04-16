@@ -84,7 +84,6 @@ const removeEmptyListsFromMap = async (options: {
         await transaction.update(ref, deletes);
     });
 
-// TODO make updates in parallel.
 const handleChange = async (options: {
     field: string;
     change: functions.Change<functions.firestore.DocumentSnapshot>;
@@ -95,15 +94,14 @@ const handleChange = async (options: {
         options.change.before.get(options.field) || [];
     const afterValues: string[] = options.change.after.get(options.field) || [];
 
-    const addedValues = findNew(beforeValues, afterValues);
-    for (const value of addedValues) {
-        await options.addedHandler(value);
-    }
-
-    const removedValues = findNew(afterValues, beforeValues);
-    for (const value of removedValues) {
-        await options.removedHandler(value);
-    }
+    await Promise.all([
+        ...findNew(beforeValues, afterValues).map((value) =>
+            options.addedHandler(value),
+        ),
+        ...findNew(afterValues, beforeValues).map((value) =>
+            options.removedHandler(value),
+        ),
+    ]);
 };
 
 // Helper to maintain a one-way many-to-many relationship between source and
@@ -126,22 +124,20 @@ export const sync = (options: {
             await handleChange({
                 field: options.sourceFkey,
                 change,
-                addedHandler: async (targetId) => {
-                    await updateSet("arrayUnion")({
+                addedHandler: async (targetId) =>
+                    updateSet("arrayUnion")({
                         collection: options.target,
                         id: targetId,
                         field,
                         items: [sourceId],
-                    });
-                },
-                removedHandler: async (targetId) => {
-                    await updateSet("arrayRemove")({
+                    }),
+                removedHandler: async (targetId) =>
+                    updateSet("arrayRemove")({
                         collection: options.target,
                         id: targetId,
                         field,
                         items: [sourceId],
-                    });
-                },
+                    }),
             });
         });
 
@@ -158,11 +154,12 @@ export const copy = (options: {
             const sourceId = context.params["sourceId"];
             const targetField = `${syncField}.${options.targetField}`;
 
-            const afterSourceCopiedItems =
+            const afterSourceCopiedItems: string[] =
                 change.after.get(options.sourceCopiedItems) || [];
-            const beforeSourceCopiedItems =
-                change.after.get(options.sourceCopiedItems) || [];
-            const afterSourceFkey = change.after.get(options.sourceFkey) || [];
+            const beforeSourceCopiedItems: string[] =
+                change.before.get(options.sourceCopiedItems) || [];
+            const afterSourceFkey: string[] =
+                change.after.get(options.sourceFkey) || [];
 
             const genUpdate = (items: string[]) => {
                 const update: Record<string, string[]> = {};
@@ -181,14 +178,13 @@ export const copy = (options: {
             await handleChange({
                 field: options.sourceFkey,
                 change,
-                addedHandler: async (targetId) => {
-                    await updateSetMap("arrayUnion")({
+                addedHandler: async (targetId) =>
+                    updateSetMap("arrayUnion")({
                         collection: options.target,
                         id: targetId,
                         field: targetField,
                         items: afterItemsUpdate,
-                    });
-                },
+                    }),
                 removedHandler: async (targetId) => {
                     await updateSetMap("arrayRemove")({
                         collection: options.target,
@@ -204,7 +200,9 @@ export const copy = (options: {
                 },
             });
 
-            // TODO these two don't work.
+            // Batch the remaining updates together. These are done separately
+            // to the previous updates to avoid race conditions.
+            const updates: Promise<any>[] = [];
 
             // Add new copied items to all fkeys.
             const newItems = findNew(
@@ -214,12 +212,14 @@ export const copy = (options: {
             if (newItems.length > 0) {
                 const newItemsUpdate = genUpdate(newItems);
                 for (const targetId of afterSourceFkey) {
-                    await updateSetMap("arrayUnion")({
-                        collection: options.target,
-                        id: targetId,
-                        field: targetField,
-                        items: newItemsUpdate,
-                    });
+                    updates.push(
+                        updateSetMap("arrayUnion")({
+                            collection: options.target,
+                            id: targetId,
+                            field: targetField,
+                            items: newItemsUpdate,
+                        }),
+                    );
                 }
             }
 
@@ -231,17 +231,24 @@ export const copy = (options: {
             if (oldItems.length > 0) {
                 const oldItemsUpdate = genUpdate(oldItems);
                 for (const targetId of afterSourceFkey) {
-                    await updateSetMap("arrayRemove")({
-                        collection: options.target,
-                        id: targetId,
-                        field: targetField,
-                        items: oldItemsUpdate,
-                    });
-                    await removeEmptyListsFromMap({
-                        collection: options.target,
-                        id: targetId,
-                        field: targetField,
-                    });
+                    updates.push(
+                        new Promise(async (resolve) => {
+                            await updateSetMap("arrayRemove")({
+                                collection: options.target,
+                                id: targetId,
+                                field: targetField,
+                                items: oldItemsUpdate,
+                            });
+                            await removeEmptyListsFromMap({
+                                collection: options.target,
+                                id: targetId,
+                                field: targetField,
+                            });
+                            resolve();
+                        }),
+                    );
                 }
             }
+
+            await Promise.all(updates);
         });
