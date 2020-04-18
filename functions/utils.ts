@@ -7,6 +7,9 @@ import {syncField} from "../shared/schema";
 admin.initializeApp();
 const db = admin.firestore();
 
+// TODO split up the business logic from firebase code.
+// Possibly by outputting simple commands (easy to test for) that then get combined together for efficient updates.
+
 // Creates a new document at the document path in the given collection if it
 // doesn't already exist.
 const createIfNotExists = async (
