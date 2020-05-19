@@ -112,22 +112,6 @@ function isRemovingItem(item, field) {
 
 service cloud.firestore {
     match /databases/{database}/documents {
-
-        function getProject(projectId) {
-            return get(/databases/$(database)/documents/projects/$(projectId));
-        }
-
-        function getUser(email) {
-            return get(/databases/$(database)/documents/users/$(email));
-        }
-
-        function hasPermission(permissions) {
-            return (
-                readEmail() in permissions.users ||
-                permissions.groups.hasAny(getUser(readEmail()).data.groups)
-            );
-        }
-
         match /groups/{group} {
             allow read: if read(readEmail() in resource.data.members);
             allow write: if write(isOnlyWriting("users") && isRemovingItem(readEmail(), "users"));
@@ -135,15 +119,20 @@ service cloud.firestore {
 
         match /users/{email} {
             allow read: if read(readEmail() == email);
-            allow write: if write(readEmail() == email && isNotWriting("groups"));
+            allow write: if write(readEmail() == email);
         }
 
         match /projects/{project} {
-            allow read: if read(hasPermission(resource.data.readers));
-            allow write: if write(hasPermission(resource.data.editors));
+            allow read: if read(
+                readEmail() in resource.data.readers.users ||
+                readEmail() in resource.data.sync.reader_users_from_groups);
+            allow write: if write(
+                readEmail() in resource.data.editors.users ||
+                readEmail() in resource.data.sync.editor_users_from_groups);
         }
 
         match /tasks/{task} {
+            // TODO don't read parent project every time.
             allow read: if read(hasPermission(getProject(resource.data.rootProject).data.readers));
             allow write: if write(hasPermission(getProject(resource.data.rootProject).data.editors));
         }
